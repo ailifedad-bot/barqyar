@@ -51,7 +51,7 @@ function logout(){token=null;closeSh()}
 function fail(e){$('ab').innerHTML='<p class="err">دسترسی ندارید یا خطایی رخ داد. با ایمیل مدیر وارد شوید.</p>'}
 function ost(i,s){api('rpc/shop_admin_set_order_status',{method:'POST',body:{p_order_id:O[i].id,p_status:s}}).then(function(){ordersView();load()}).catch(function(e){alert('تغییر وضعیت انجام نشد: '+(e.message||''));fail(e)})}
 function saveOrderOps(i){var b={delivery_method:val('odm'+i)||null,shipping_fee:Math.max(0,Number(val('ofee'+i))||0),payment_status:val('opay'+i)};api('shop_orders?id=eq.'+O[i].id,{method:'PATCH',prefer:'return=minimal',body:b}).then(ordersView).catch(function(e){alert('ذخیره اطلاعات ارسال/پرداخت ناموفق بود: '+(e.message||''))})}
-function odel(i){if(confirm('این سفارش حذف شود؟'))api('shop_orders?id=eq.'+O[i].id,{method:'DELETE'}).then(ordersView).catch(fail)}
+function odel(i){if(!confirm('این سفارش حذف شود؟'))return;var restore=O[i].inventory_deducted?api('rpc/shop_admin_set_order_status',{method:'POST',body:{p_order_id:O[i].id,p_status:'cancelled'}}):Promise.resolve();restore.then(function(){return api('shop_orders?id=eq.'+O[i].id,{method:'DELETE'})}).then(ordersView).catch(fail)}
 function psave(i){var stockText=val('pq'+i).trim();var b={name:val('pn'+i).trim(),category:val('pc'+i).trim(),price:Number(val('pp'+i))||0,unit:val('pu'+i).trim()||'عدد',emoji:val('pe'+i)||'🔌',in_stock:val('ps'+i)==='1',stock_qty:stockText===''?null:Math.max(0,Math.floor(Number(stockText)))};
  if(!b.name||!b.category)return alert('نام و دسته را وارد کنید.');
  api('shop_products?id=eq.'+P[i].id,{method:'PATCH',prefer:'return=minimal',body:b}).then(function(){Object.assign(P[i],b);draw();alert('ذخیره شد')}).catch(function(){alert('ذخیره نشد')})}
