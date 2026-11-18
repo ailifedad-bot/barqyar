@@ -74,7 +74,7 @@ function draw(){
   else if(n)b='<div class="qty"><button onclick="chg('+x.id+',1)">+</button><b>'+f(n)+'</b><button onclick="chg('+x.id+',-1)">−</button></div>';
   else b='<button class="btn" onclick="chg('+x.id+',1)">افزودن به سبد</button>';
   var ic=x.image_url?'<div class="ic im"><img src="'+esc(x.image_url)+'" alt="" loading="lazy"></div>':'<div class="ic">'+esc(x.emoji)+'</div>';
-  return '<div class="p">'+ic+'<b>'+esc(x.name)+'</b><small>'+esc(x.category)+' · '+esc(x.unit)+'</small><div class="pr">'+pr(x.price)+'</div>'+b+'</div>'
+  return '<div class="p">'+ic+'<b>'+esc(x.name)+'</b><small>'+esc(x.category)+' · '+esc(x.unit)+'</small><small class="mu">'+(x.stock_qty==null?'موجودی دقیق ثبت نشده':('موجودی: '+f(x.stock_qty)))+'</small><div class="pr">'+pr(x.price)+'</div>'+b+'</div>'
  }).join(''):'<p class="mu" style="grid-column:1/-1;text-align:center">کالایی پیدا نشد</p>';
  var L=lines();$('bar').className='bar'+(L.n?'':' h');$('bn').textContent='مشاهده سبد ('+f(L.n)+' کالا)';$('bt').textContent=pr(L.t);
 }
