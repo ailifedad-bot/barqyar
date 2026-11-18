@@ -9,7 +9,7 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){retur
 function val(i){var e=$(i);return e?e.value:''}
 function api(path,o){o=o||{};var h={apikey:KEY,Authorization:'Bearer '+(token||KEY),'Content-Type':'application/json'};if(o.prefer)h.Prefer=o.prefer;
  return fetch(SB+'/rest/v1/'+path,{method:o.method||'GET',headers:h,body:o.body?JSON.stringify(o.body):undefined,keepalive:!!o.keep}).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error(t||r.status)});return r.status===204?null:r.text().then(function(t){return t?JSON.parse(t):null})})}
-function load(){api('shop_products?select=*&order=id').then(function(d){P=d||[];draw()}).catch(function(){$('grid').innerHTML='<p class="err" style="grid-column:1/-1;text-align:center">بارگذاری کالاها ناموفق بود. صفحه را دوباره باز کنید.</p>'})}
+function load(){api('shop_products?select=*&order=id').then(function(d){P=d||[];draw();if(mode==='cart')cartView()}).catch(function(){$('grid').innerHTML='<p class="err" style="grid-column:1/-1;text-align:center">بارگذاری کالاها ناموفق بود. صفحه را دوباره باز کنید.</p>'})}
 function cats(){return ['همه'].concat(P.map(function(x){return x.category}).filter(function(v,i,a){return v&&a.indexOf(v)===i}))}
 function chg(id,d){var p=P.find(function(x){return String(x.id)===String(id)});if(!p)return;var next=Math.max(0,(cart[id]||0)+d);if(d>0&&(!p.in_stock||(p.stock_qty!==null&&p.stock_qty!==undefined&&next>Number(p.stock_qty)))){alert('تعداد درخواستی بیشتر از موجودی ثبت‌شده است.');return}cart[id]=next;if(!cart[id])delete cart[id];saved=false;code='';draw();if(mode==='cart')cartView()}
 function show(m){mode=m;$('sh').className='sheet o'}
@@ -132,6 +132,7 @@ function chk(){if(!token){clearInterval(pollT);pollT=null;lastNew=-1;badge(0);re
   lastNew=n}).catch(function(){})}
 function startPoll(){try{if(window.Notification&&Notification.permission==='default')Notification.requestPermission()}catch(e){}if(pollT)return;chk();pollT=setInterval(chk,30000)}
 load();
+setInterval(function(){if(document.visibilityState==='visible')load()},60000);
 
 /* ---- نصب PWA ---- */
 var dip=null;
