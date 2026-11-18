@@ -49,16 +49,17 @@ function login(){
 }
 function logout(){token=null;closeSh()}
 function fail(e){$('ab').innerHTML='<p class="err">دسترسی ندارید یا خطایی رخ داد. با ایمیل مدیر وارد شوید.</p>'}
-function ost(i,s){api('shop_orders?id=eq.'+O[i].id,{method:'PATCH',prefer:'return=minimal',body:{status:s}}).then(ordersView).catch(fail)}
+function ost(i,s){api('rpc/shop_admin_set_order_status',{method:'POST',body:{p_order_id:O[i].id,p_status:s}}).then(function(){ordersView();load()}).catch(function(e){alert('تغییر وضعیت انجام نشد: '+(e.message||''));fail(e)})}
+function saveOrderOps(i){var b={delivery_method:val('odm'+i)||null,shipping_fee:Math.max(0,Number(val('ofee'+i))||0),payment_status:val('opay'+i)};api('shop_orders?id=eq.'+O[i].id,{method:'PATCH',prefer:'return=minimal',body:b}).then(ordersView).catch(function(e){alert('ذخیره اطلاعات ارسال/پرداخت ناموفق بود: '+(e.message||''))})}
 function odel(i){if(confirm('این سفارش حذف شود؟'))api('shop_orders?id=eq.'+O[i].id,{method:'DELETE'}).then(ordersView).catch(fail)}
-function psave(i){var b={name:val('pn'+i).trim(),category:val('pc'+i).trim(),price:Number(val('pp'+i))||0,unit:val('pu'+i).trim()||'عدد',emoji:val('pe'+i)||'🔌',in_stock:val('ps'+i)==='1'};
+function psave(i){var stockText=val('pq'+i).trim();var b={name:val('pn'+i).trim(),category:val('pc'+i).trim(),price:Number(val('pp'+i))||0,unit:val('pu'+i).trim()||'عدد',emoji:val('pe'+i)||'🔌',in_stock:val('ps'+i)==='1',stock_qty:stockText===''?null:Math.max(0,Math.floor(Number(stockText)))};
  if(!b.name||!b.category)return alert('نام و دسته را وارد کنید.');
  api('shop_products?id=eq.'+P[i].id,{method:'PATCH',prefer:'return=minimal',body:b}).then(function(){Object.assign(P[i],b);draw();alert('ذخیره شد')}).catch(function(){alert('ذخیره نشد')})}
 function pdel(i){if(confirm('این کالا حذف شود؟'))api('shop_products?id=eq.'+P[i].id,{method:'DELETE'}).then(function(){P.splice(i,1);draw();productsView()}).catch(function(){alert('حذف نشد')})}
-function padd(){api('shop_products',{method:'POST',prefer:'return=representation',body:{name:'کالای جدید',category:'متفرقه',unit:'عدد',price:0,emoji:'🔌',in_stock:false}}).then(function(d){P.unshift(d[0]);draw();productsView()}).catch(function(){alert('افزودن نشد')})}
+function padd(){api('shop_products',{method:'POST',prefer:'return=representation',body:{name:'کالای جدید',category:'متفرقه',unit:'عدد',price:0,emoji:'🔌',in_stock:false,stock_qty:0}}).then(function(d){P.unshift(d[0]);draw();productsView()}).catch(function(){alert('افزودن نشد')})}
 
 /* ---- بهبودها: عکس کالا، کد پیگیری، گزارش، اعلان ---- */
-var ST={new:'جدید',confirmed:'تأییدشده',shipping:'در حال ارسال',done:'تحویل‌شده',cancelled:'لغو‌شده'};
+var ST={new:'جدید',confirmed:'تأییدشده',preparing:'در حال آماده‌سازی',shipping:'تحویل به ارسال‌کننده',done:'تحویل‌شده',cancelled:'لغوشده'};
 var code='',pollT=null,lastNew=-1;
 function genCode(){var a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',s='BY-',b=new Uint8Array(6);crypto.getRandomValues(b);for(var i=0;i<6;i++)s+=a[b[i]%a.length];return s}
 function draw(){
@@ -69,7 +70,7 @@ function draw(){
  var l=P.filter(function(x){return (cat==='همه'||x.category===cat)&&(!q||x.name.indexOf(q)>-1||x.category.indexOf(q)>-1)});
  $('grid').innerHTML=l.length?l.map(function(x){
   var n=cart[x.id]||0,b;
-  if(!x.in_stock)b='<button class="btn gh" disabled>ناموجود</button>';
+  if(!x.in_stock||(x.stock_qty!==null&&x.stock_qty!==undefined&&Number(x.stock_qty)<=0))b='<button class="btn gh" disabled>ناموجود</button>';
   else if(n)b='<div class="qty"><button onclick="chg('+x.id+',1)">+</button><b>'+f(n)+'</b><button onclick="chg('+x.id+',-1)">−</button></div>';
   else b='<button class="btn" onclick="chg('+x.id+',1)">افزودن به سبد</button>';
   var ic=x.image_url?'<div class="ic im"><img src="'+esc(x.image_url)+'" alt="" loading="lazy"></div>':'<div class="ic">'+esc(x.emoji)+'</div>';
@@ -93,10 +94,17 @@ function adminView(){
  startPoll();
 }
 function ordersView(){api('shop_orders?select=*&order=created_at.desc&limit=100').then(function(d){O=d||[];
- $('ab').innerHTML=O.length?O.map(function(o,i){return '<div class="ar"><div class="row" style="border:0"><b>'+esc(o.customer_name)+'</b><span class="st">'+ST[o.status]+'</span></div><div class="mu" dir="ltr" style="text-align:right">'+esc(o.tracking_code||'')+'</div><div class="mu">'+esc(o.phone)+' · '+new Date(o.created_at).toLocaleString('fa-IR')+'</div><div class="mu">'+esc(o.address)+'</div>'+
-  o.items.map(function(x){return '<div style="font-size:13px">• '+esc(x.name)+' × '+f(x.qty)+'</div>'}).join('')+'<div class="tot" style="padding:6px 0">'+pr(o.total)+'</div>'+
-  '<div class="acts"><button onclick="ost('+i+',\'confirmed\')">تأیید</button><button onclick="ost('+i+',\'shipping\')">ارسال شد</button><button onclick="ost('+i+',\'done\')">تحویل شد</button><button onclick="ost('+i+',\'cancelled\')">لغو</button><button onclick="odel('+i+')">حذف</button></div></div>'}).join(''):'<p class="mu">هنوز سفارشی ثبت نشده است.</p>';
+ $('ab').innerHTML=O.length?O.map(function(o,i){
+ var pm=o.payment_method==='card_transfer_on_delivery'?'کارت‌به‌کارت پس از تحویل':'نقدی هنگام تحویل';
+ return '<div class="ar"><div class="row" style="border:0"><b>'+esc(o.customer_name)+'</b><span class="st">'+(ST[o.status]||o.status)+'</span></div><div class="mu" dir="ltr" style="text-align:right">'+esc(o.tracking_code||'')+'</div><div class="mu">'+esc(o.phone)+' · '+new Date(o.created_at).toLocaleString('fa-IR')+'</div><div class="mu">'+esc(o.address)+'</div>'+
+ o.items.map(function(x){return '<div style="font-size:13px">• '+esc(x.name)+' × '+f(x.qty)+' | واحد '+pr(x.price)+' | جمع '+pr(x.line_total||x.price*x.qty)+'</div>'}).join('')+
+ '<div class="tot" style="padding:6px 0">جمع کالاها: '+pr(o.total)+'<br><small>هزینه ارسال: '+pr(o.shipping_fee||0)+' · مبلغ نهایی: '+pr(Number(o.total)+Number(o.shipping_fee||0))+'</small></div>'+
+ '<div class="mu">پرداخت: '+pm+' · وضعیت: '+(o.payment_status==='paid'?'پرداخت‌شده':'پرداخت‌نشده')+'</div>'+
+ '<div class="g"><label>روش ارسال<select id="odm'+i+'"><option value="">هماهنگی مدیر</option><option value="motorcycle"'+(o.delivery_method==='motorcycle'?' selected':'')+'>پیک موتوری</option><option value="van"'+(o.delivery_method==='van'?' selected':'')+'>وانت</option><option value="post"'+(o.delivery_method==='post'?' selected':'')+'>پست</option><option value="carrier"'+(o.delivery_method==='carrier'?' selected':'')+'>کریر / باربری</option></select></label><label>هزینه ارسال (ریال)<input id="ofee'+i+'" type="number" min="0" value="'+Number(o.shipping_fee||0)+'"></label><label>وضعیت پرداخت<select id="opay'+i+'"><option value="unpaid"'+(o.payment_status!=='paid'?' selected':'')+'>پرداخت‌نشده</option><option value="paid"'+(o.payment_status==='paid'?' selected':'')+'>پرداخت‌شده</option></select></label></div>'+
+ '<div class="acts"><button onclick="saveOrderOps('+i+')">ذخیره ارسال و پرداخت</button><button onclick="ost('+i+',&quot;confirmed&quot;)">تأیید سفارش</button><button onclick="ost('+i+',&quot;preparing&quot;)">آماده‌سازی</button><button onclick="ost('+i+',&quot;shipping&quot;)">تحویل به ارسال‌کننده</button><button onclick="ost('+i+',&quot;done&quot;)">تحویل مشتری</button><button onclick="ost('+i+',&quot;cancelled&quot;)">لغو</button><button onclick="odel('+i+')">حذف</button></div></div>'
+ }).join(''):'<p class="mu">هنوز سفارشی ثبت نشده است.</p>';
  lastNew=O.filter(function(o){return o.status==='new'}).length;badge(lastNew)}).catch(fail)}
+
 function reportView(){api('shop_orders?select=created_at,total,items&status=neq.cancelled&order=created_at.desc&limit=1000').then(function(d){
  d=d||[];var now=Date.now(),day=864e5,s=new Date();s.setHours(0,0,0,0);
  var R=[['امروز',s.getTime()],['۷ روز اخیر',now-7*day],['۳۰ روز اخیر',now-30*day],['کل',0]];
