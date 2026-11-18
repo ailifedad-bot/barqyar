@@ -14,7 +14,7 @@ function cats(){return ['همه'].concat(P.map(function(x){return x.category}).f
 function chg(id,d){cart[id]=Math.max(0,(cart[id]||0)+d);if(!cart[id])delete cart[id];saved=false;draw();if(mode==='cart')cartView()}
 function show(m){mode=m;$('sh').className='sheet o'}
 function closeSh(){$('sh').className='sheet';mode=''}
-function lines(){var t=0,n=0,a=[];P.forEach(function(x){var q=cart[x.id];if(!q)return;t+=q*x.price;n+=q;a.push({name:x.name,unit:x.unit,qty:q,price:x.price})});return {a:a,t:t,n:n}}
+function lines(){var t=0,n=0,a=[];P.forEach(function(x){var q=cart[x.id];if(!q)return;var line=Number(q)*Number(x.price);t+=line;n+=q;a.push({product_id:x.id,name:x.name,unit:x.unit,qty:q,price:Number(x.price),line_total:line})});return {a:a,t:t,n:n}}
 function openCart(){show('cart');cartView()}
 function cartView(){
  var L=lines(),h='';
@@ -78,7 +78,7 @@ function orderText(){var L=lines();return 'سفارش جدید از برق‌ی�
 function go(el,k){
  if(!val('nm').trim()||!val('ph').trim()||!val('ad').trim()){$('er').textContent='لطفاً نام، شماره تماس و آدرس را کامل کنید.';return false}
  var L=lines();
- if(!saved){saved=true;code=genCode();api('shop_orders',{method:'POST',prefer:'return=minimal',keep:1,body:{customer_name:val('nm').trim(),phone:val('ph').trim(),address:val('ad').trim(),items:L.a,total:L.t,tracking_code:code}}).catch(function(){saved=false})}
+ if(!saved){saved=true;code=genCode();api('shop_orders',{method:'POST',prefer:'return=minimal',keep:1,body:{customer_name:val('nm').trim(),phone:val('ph').trim(),address:val('ad').trim(),items:L.a,total:L.t,tracking_code:code,payment_method:'cash_on_delivery'}}).catch(function(){saved=false})}
  var t=orderText();
  $('er').className='okc';$('er').textContent='سفارش ثبت شد. کد پیگیری شما: '+code+' (آن را نگه دارید)';
  if(k==='wa'){el.href='https://wa.me/'+WA+'?text='+encodeURIComponent(t)}
