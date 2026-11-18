@@ -1,5 +1,5 @@
 var SB='https://zgswoheckqasqoclhodg.supabase.co',KEY='sb_publishable_Gs5TQ0bdmhNvboT6_1gU3Q_mzmnv2Ny';
-var WA='989366428816',TG='makekzir',MAIL='makealmatykz@gmail.com';
+var WA='989366428816',MAIL='makealmatykz@gmail.com';
 var P=[],cat='همه',cart={},saved=false,mode='',token=null,tab='orders',O=[];
 function $(i){return document.getElementById(i)}
 function f(n){return Number(n||0).toLocaleString('fa-IR')}
@@ -11,7 +11,7 @@ function api(path,o){o=o||{};var h={apikey:KEY,Authorization:'Bearer '+(token||K
  return fetch(SB+'/rest/v1/'+path,{method:o.method||'GET',headers:h,body:o.body?JSON.stringify(o.body):undefined,keepalive:!!o.keep}).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error(t||r.status)});return r.status===204?null:r.text().then(function(t){return t?JSON.parse(t):null})})}
 function load(){api('shop_products?select=*&order=id').then(function(d){P=d||[];draw()}).catch(function(){$('grid').innerHTML='<p class="err" style="grid-column:1/-1;text-align:center">بارگذاری کالاها ناموفق بود. صفحه را دوباره باز کنید.</p>'})}
 function cats(){return ['همه'].concat(P.map(function(x){return x.category}).filter(function(v,i,a){return v&&a.indexOf(v)===i}))}
-function chg(id,d){cart[id]=Math.max(0,(cart[id]||0)+d);if(!cart[id])delete cart[id];saved=false;draw();if(mode==='cart')cartView()}
+function chg(id,d){var p=P.find(function(x){return String(x.id)===String(id)});if(!p)return;var next=Math.max(0,(cart[id]||0)+d);if(d>0&&(!p.in_stock||(p.stock_qty!==null&&p.stock_qty!==undefined&&next>Number(p.stock_qty)))){alert('تعداد درخواستی بیشتر از موجودی ثبت‌شده است.');return}cart[id]=next;if(!cart[id])delete cart[id];saved=false;code='';draw();if(mode==='cart')cartView()}
 function show(m){mode=m;$('sh').className='sheet o'}
 function closeSh(){$('sh').className='sheet';mode=''}
 function lines(){var t=0,n=0,a=[];P.forEach(function(x){var q=cart[x.id];if(!q)return;var line=Number(q)*Number(x.price);t+=line;n+=q;a.push({product_id:x.id,name:x.name,unit:x.unit,qty:q,price:Number(x.price),line_total:line})});return {a:a,t:t,n:n}}
@@ -19,24 +19,27 @@ function openCart(){show('cart');cartView()}
 function cartView(){
  var L=lines(),h='';
  if(!L.n){$('in').innerHTML='<p style="text-align:center">سبد خرید خالی است</p><button class="btn" onclick="closeSh()">بستن</button>';return}
- L.a.forEach(function(i){var x=P.filter(function(p){return p.name===i.name})[0];h+='<div class="row"><div><b>'+esc(i.name)+'</b><br><small class="mu">'+pr(i.price)+' × '+f(i.qty)+'</small></div><div class="qty"><button onclick="chg('+x.id+',1)">+</button><b>'+f(i.qty)+'</b><button onclick="chg('+x.id+',-1)">−</button></div></div>'});
- var nm=val('nm'),ph=val('ph'),ad=val('ad');
- $('in').innerHTML='<h3 style="margin:0 0 6px">سبد خرید</h3>'+h+'<div class="tot">جمع کل: '+pr(L.t)+'</div>'+
- '<input id="nm" placeholder="نام و نام خانوادگی" value="'+esc(nm)+'"><input id="ph" type="tel" placeholder="شماره تماس" value="'+esc(ph)+'"><textarea id="ad" rows="2" placeholder="آدرس تحویل">'+esc(ad)+'</textarea>'+
- '<p id="er" class="err"></p><p class="mu">ثبت و ارسال سفارش از طریق:</p>'+
- '<a class="btn wa" target="_blank" rel="noopener" href="#" onclick="return go(this,\'wa\')">واتس‌اپ</a>'+
- '<a class="btn tg" target="_blank" rel="noopener" href="https://t.me/'+TG+'" onclick="return go(this,\'tg\')">تلگرام (@'+TG+')</a>'+
- '<form method="POST" action="https://formsubmit.co/'+MAIL+'" target="_blank" onsubmit="return go(this,\'mail\')">'+
+ L.a.forEach(function(i){var x=P.find(function(p){return String(p.id)===String(i.product_id)});if(!x)return;h+='<div class="row"><div style="flex:1"><b>'+esc(i.name)+'</b><br><small class="mu">قیمت واحد: '+pr(i.price)+' × '+f(i.qty)+'</small><br><b class="pr">مبلغ این کالا: '+pr(i.line_total)+'</b></div><div class="qty"><button onclick="chg('+x.id+',1)">+</button><b>'+f(i.qty)+'</b><button onclick="chg('+x.id+',-1)">−</button></div></div>'});
+ var nm=val('nm'),ph=val('ph'),ad=val('ad'),pay=val('pay')||'cash_on_delivery',delivery=val('delivery')||'';
+ $('in').innerHTML='<h3 style="margin:0 0 6px">سبد خرید</h3>'+h+'<div class="tot">جمع مبلغ کالاها: '+pr(L.t)+'</div><p class="mu">هزینه ارسال پس از بررسی آدرس و هماهنگی مدیر اعلام می‌شود.</p>'+
+ '<input id="nm" placeholder="نام و نام خانوادگی" value="'+esc(nm)+'"><input id="ph" type="tel" placeholder="شماره تماس" value="'+esc(ph)+'"><textarea id="ad" rows="2" placeholder="آدرس کامل تحویل">'+esc(ad)+'</textarea>'+
+ '<label>روش پرداخت</label><select id="pay"><option value="cash_on_delivery"'+(pay==='cash_on_delivery'?' selected':'')+'>نقدی هنگام تحویل</option><option value="card_transfer_on_delivery"'+(pay==='card_transfer_on_delivery'?' selected':'')+'>کارت‌به‌کارت پس از تحویل</option></select>'+
+ '<label>روش ارسال پیشنهادی</label><select id="delivery"><option value=""'+(!delivery?' selected':'')+'>هماهنگی توسط مدیر برق‌یار</option><option value="motorcycle"'+(delivery==='motorcycle'?' selected':'')+'>پیک موتوری</option><option value="van"'+(delivery==='van'?' selected':'')+'>وانت</option><option value="post"'+(delivery==='post'?' selected':'')+'>پست</option><option value="carrier"'+(delivery==='carrier'?' selected':'')+'>کریر / باربری</option></select>'+
+ '<p id="er" class="err"></p><p class="mu">پس از ثبت، مدیر برای تأیید موجودی، هزینه ارسال و هماهنگی تحویل با شما تماس می‌گیرد.</p>'+
+ '<button class="btn wa" type="button" onclick="sendWhatsApp()">ثبت سفارش و ارسال به واتساپ</button>'+
+ '<form id="mailOrder" method="POST" action="https://formsubmit.co/'+MAIL+'" target="_blank" onsubmit="return sendEmail(event,this)">'+
  '<input type="hidden" name="_subject" value="سفارش جدید برق‌یار"><input type="hidden" name="_captcha" value="false"><input type="hidden" name="_template" value="table">'+
  '<input type="hidden" name="name" id="f_n"><input type="hidden" name="phone" id="f_p"><input type="hidden" name="address" id="f_a"><input type="hidden" name="order" id="f_o">'+
- '<button class="btn gh" type="submit">ایمیل</button></form>';
+ '<button class="btn gh" type="submit">ثبت سفارش و ارسال به ایمیل مدیر</button></form>';
 }
+
 function openContact(){show('contact');
- $('in').innerHTML='<h3 style="margin:0 0 6px">تماس با ما</h3><a class="btn wa" target="_blank" rel="noopener" href="https://wa.me/'+WA+'">واتس‌اپ</a><a class="btn tg" target="_blank" rel="noopener" href="https://t.me/'+TG+'">تلگرام (@'+TG+')</a>'+
+ $('in').innerHTML='<h3 style="margin:0 0 6px">تماس با ما</h3><a class="btn wa" target="_blank" rel="noopener" href="https://wa.me/'+WA+'">واتس‌اپ</a>'+
  '<h4 style="margin:16px 0 6px">ارسال پیام</h4><form method="POST" action="https://formsubmit.co/'+MAIL+'" target="_blank">'+
  '<input type="hidden" name="_subject" value="پیام جدید از برق‌یار"><input type="hidden" name="_captcha" value="false"><input type="hidden" name="_template" value="table">'+
  '<input name="name" placeholder="نام" required><input name="phone" type="tel" placeholder="شماره تماس" required><textarea name="message" rows="3" placeholder="پیام شما" required></textarea><button class="btn" type="submit">ارسال پیام</button></form>';
 }
+
 /* ---------- مدیر ---------- */
 function openAdmin(){show('admin');token?adminView():loginView()}
 function loginView(m){$('in').innerHTML='<h3 style="margin:0 0 8px">ورود مدیر</h3><input id="em" type="email" placeholder="ایمیل" dir="ltr"><input id="pw" type="password" placeholder="رمز عبور" dir="ltr"><button class="btn" onclick="login()">ورود</button><p class="err">'+(m||'')+'</p>'}
@@ -74,18 +77,11 @@ function draw(){
  }).join(''):'<p class="mu" style="grid-column:1/-1;text-align:center">کالایی پیدا نشد</p>';
  var L=lines();$('bar').className='bar'+(L.n?'':' h');$('bn').textContent='مشاهده سبد ('+f(L.n)+' کالا)';$('bt').textContent=pr(L.t);
 }
-function orderText(){var L=lines();return 'سفارش جدید از برق‌یار\nکد پیگیری: '+code+'\n'+L.a.map(function(i){return '• '+i.name+' × '+i.qty+' ('+i.unit+') = '+en(i.qty*i.price)}).join('\n')+'\nجمع کل: '+en(L.t)+'\nنام: '+val('nm')+'\nتلفن: '+val('ph')+'\nآدرس: '+val('ad')}
-function go(el,k){
- if(!val('nm').trim()||!val('ph').trim()||!val('ad').trim()){$('er').textContent='لطفاً نام، شماره تماس و آدرس را کامل کنید.';return false}
- var L=lines();
- if(!saved){saved=true;code=genCode();api('shop_orders',{method:'POST',prefer:'return=minimal',keep:1,body:{customer_name:val('nm').trim(),phone:val('ph').trim(),address:val('ad').trim(),items:L.a,total:L.t,tracking_code:code,payment_method:'cash_on_delivery'}}).catch(function(){saved=false})}
- var t=orderText();
- $('er').className='okc';$('er').textContent='سفارش ثبت شد. کد پیگیری شما: '+code+' (آن را نگه دارید)';
- if(k==='wa'){el.href='https://wa.me/'+WA+'?text='+encodeURIComponent(t)}
- else if(k==='tg'){try{navigator.clipboard.writeText(t)}catch(e){}$('er').textContent+=' — متن سفارش کپی شد؛ در تلگرام Paste و ارسال کنید.'}
- else{$('f_n').value=val('nm');$('f_p').value=val('ph');$('f_a').value=val('ad');$('f_o').value=t}
- return true;
-}
+function orderText(){var L=lines();var pay=val('pay')==='card_transfer_on_delivery'?'کارت‌به‌کارت پس از تحویل':'نقدی هنگام تحویل';var dm={motorcycle:'پیک موتوری',van:'وانت',post:'پست',carrier:'کریر / باربری'};var delivery=dm[val('delivery')]||'هماهنگی توسط مدیر برق‌یار';return 'سفارش جدید از برق‌یار\nکد پیگیری: '+code+'\n'+L.a.map(function(i){return '• '+i.name+' × '+i.qty+' ('+i.unit+') | واحد: '+en(i.price)+' | جمع: '+en(i.line_total)}).join('\n')+'\nجمع مبلغ کالاها: '+en(L.t)+'\nروش پرداخت: '+pay+'\nروش ارسال: '+delivery+'\nهزینه ارسال: پس از هماهنگی مدیر\nنام: '+val('nm')+'\nتلفن: '+val('ph')+'\nآدرس: '+val('ad')}
+async function createOrder(){if(!val('nm').trim()||!val('ph').trim()||!val('ad').trim())throw new Error('لطفاً نام، شماره تماس و آدرس را کامل کنید.');var L=lines();if(!L.n)throw new Error('سبد خرید خالی است.');if(saved&&code)return {code:code,text:orderText()};code=genCode();var body={customer_name:val('nm').trim(),phone:val('ph').trim(),address:val('ad').trim(),items:L.a,total:L.t,tracking_code:code,payment_method:val('pay')||'cash_on_delivery',delivery_method:val('delivery')||null};try{await api('shop_orders',{method:'POST',prefer:'return=minimal',keep:1,body:body});saved=true;}catch(e){saved=false;code='';throw new Error('ثبت سفارش در پایگاه داده انجام نشد. لطفاً دوباره تلاش کنید. '+(e.message||''));}var t=orderText();$('er').className='okc';$('er').textContent='سفارش در پایگاه داده ثبت شد. کد پیگیری: '+code+'؛ هزینه ارسال بعداً اعلام می‌شود.';return {code:code,text:t};}
+async function sendWhatsApp(){var w=window.open('about:blank','_blank');try{var r=await createOrder();if(w)w.location.href='https://wa.me/'+WA+'?text='+encodeURIComponent(r.text);else $('er').textContent='سفارش ثبت شد. پنجره واتساپ باز نشد؛ کد پیگیری: '+r.code;}catch(e){if(w)w.close();$('er').className='err';$('er').textContent=e.message||'خطا در ثبت سفارش';}}
+async function sendEmail(ev,form){ev.preventDefault();try{var r=await createOrder();$('f_n').value=val('nm');$('f_p').value=val('ph');$('f_a').value=val('ad');$('f_o').value=r.text;form.submit();}catch(e){$('er').className='err';$('er').textContent=e.message||'خطا در ثبت سفارش';}}
+
 function openTrack(){show('track');$('in').innerHTML='<h3 style="margin:0 0 8px">پیگیری سفارش</h3><input id="tc" placeholder="کد پیگیری (مثلاً BY-AB12CD)" dir="ltr"><button class="btn" onclick="doTrack()">پیگیری</button><div id="tr" style="margin-top:10px"></div>'}
 function doTrack(){var c=val('tc').trim();if(!c)return;
  api('rpc/shop_track_order',{method:'POST',body:{p_code:c}}).then(function(d){
