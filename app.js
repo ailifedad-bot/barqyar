@@ -183,7 +183,7 @@ function doTrack(){var c=val('tc').trim().toUpperCase();if(!c)return;
   if($('homePhone4'))$('homePhone4').value=phone4;
   var h='<div class="ar"><b>وضعیت: '+ST[o.status]+'</b><div class="mu">'+new Date(o.created_at).toLocaleString('fa-IR')+' · '+pr(o.total)+'</div></div>';
   h+='<div class="cfbox"><b>اطلاعات تأیید همین سفارش</b><p class="mu" style="margin:6px 0">کد پیگیری و چهار رقم آخر تلفن به‌صورت خودکار برای همین سفارش دریافت شد.</p><div class="mu">کد پیگیری</div><b dir="ltr">'+esc(TR)+'</b><div class="mu" style="margin-top:8px">چهار رقم آخر شماره تلفن ثبت‌شده</div><input id="tp4" type="tel" inputmode="numeric" maxlength="4" value="'+esc(phone4)+'" placeholder="در اطلاعات سفارش ثبت نشده" dir="ltr"><button class="btn gh" onclick="copyTrackInfo()">کپی کد و چهار رقم آخر</button></div>';
-  if(o.customer_confirmed_at)h+='<div class="cfok">✅ شما دریافت کالا را تأیید کرده‌اید<br><small>'+new Date(o.customer_confirmed_at).toLocaleString('fa-IR')+'</small></div>';
+  if(o.customer_confirmed_at)h+='<div class="cfok">✅ شما دریافت کالا را تأیید کرده‌اید<br><small>'+new Date(o.customer_confirmed_at).toLocaleString('fa-IR')+'</small></div><div class="cfbox"><b>ارسال تأیید دریافت به مدیر</b><p class="mu">کد یکتای همین سفارش به‌صورت خودکار در پیام مدیر قرار گرفته است. برای ارسال، دکمه زیر را بزنید.</p><label class="mu" for="managerOrderCode">کادر کد یکتای سفارش</label><input id="managerOrderCode" dir="ltr" readonly value="'+esc(TR)+'"><a class="btn wa" target="_blank" rel="noopener" href="'+managerConfirmLink(TR)+'">ارسال پیام تأیید به مدیر در واتساپ</a></div>';
   else if(o.status==='shipping'||o.status==='done')h+='<div class="cfbox"><div style="font-weight:700;margin-bottom:6px">کالای سفارش را دریافت کرده‌اید؟</div><button class="cfbtn" onclick="custConfirm()">✅ تأیید نهایی دریافت کالا</button><p id="tm" class="err"></p></div>';
   else h+='<p class="mu">فرم تأیید دریافت پس از ارسال سفارش فعال می‌شود.</p>';
   if(o.delivered_at)h+='<div class="dlok">📦 تحویل نهایی توسط مدیر ثبت شد<br><small>'+new Date(o.delivered_at).toLocaleString('fa-IR')+'</small></div>';
@@ -202,7 +202,7 @@ function ordersView(){api('shop_orders?select=*&order=created_at.desc&limit=100'
   if(o.status==='new')a+='<button onclick="ost('+i+',\'confirmed\')">تأیید سفارش</button>';
   if(o.status==='confirmed')a+='<button onclick="ost('+i+',\'preparing\')">آماده‌سازی</button>';
   if(o.status==='preparing')a+='<button onclick="ost('+i+',\'shipping\')">تحویل به ارسال‌کننده</button>';
-  if(o.status==='shipping'&&o.customer_confirmed_at)a+='<button class="dlbtn" onclick="odeliver('+i+')">🟣 ثبت تحویل نهایی مدیر</button>';
+  if(o.status==='shipping'&&o.customer_confirmed_at)a+='<div class="cfbox" style="width:100%"><b>مشتری دریافت همین سفارش را تأیید کرده است.</b><label class="mu" for="odcode_'+i+'">کادر مخصوص کد یکتای سفارش</label><input id="odcode_'+i+'" dir="ltr" value="'+esc(o.tracking_code||'')+'" placeholder="کد یکتای سفارش" autocomplete="off"><button class="dlbtn" onclick="odeliver('+i+')">🟣 تأیید نهایی همین سفارش توسط مدیر</button></div>';
   if(o.status==='done')a+='<button onclick="docOrder('+i+')">📄 سند تحویل (PDF)</button>';
   if(o.status!=='done'&&o.status!=='cancelled')a+='<button onclick="ost('+i+',\'cancelled\')">لغو</button>';
   if(o.status!=='done')a+='<button onclick="odel('+i+')">حذف</button>';
@@ -261,13 +261,15 @@ if(!isStd()&&$('inst'))$('inst').style.display='';
 var TR=null,PHONE='۰۹۳۶۶۴۲۸۸۱۶',CRT='تمام حقوق معنوی و مادی برنامه برقیار متعلق به سازنده برنامه بنام محمدرضا دانشیار می‌باشد.';
 function errMsg(e){try{var m=JSON.parse(e.message);return m.message||m.error_description||''}catch(x){var t=e&&e.message?String(e.message):'';return t.length<160&&t.indexOf('<')<0?t:''}}
 function toEn(s){return String(s).replace(/[۰-۹]/g,function(c){return '۰۱۲۳۴۵۶۷۸۹'.indexOf(c)}).replace(/[٠-٩]/g,function(c){return '٠١٢٣٤٥٦٧٨٩'.indexOf(c)})}
+function managerConfirmMessage(code){return 'تأیید دریافت مشتری در برنامه برق‌یار ثبت شد. لطفاً همان سفارش را در پنل مدیریت بررسی و تحویل نهایی را ثبت کنید.\nکد یکتای سفارش: '+code+'\nبرنامه برق‌یار: '+returnAppUrl(code)}
+function managerConfirmLink(code){return 'https://wa.me/'+WA+'?text='+encodeURIComponent(managerConfirmMessage(code))}
 function homeCustConfirm(){
  var c=val('homeTrackCode').trim().toUpperCase(),p=toEn(val('homePhone4').trim()),m=$('homeConfirmMsg');
  if(!c){m.className='err';m.textContent='کد پیگیری سفارش را وارد کنید.';return}
  if(!/^\d{4}$/.test(p)){m.className='err';m.textContent='چهار رقم آخر شماره تلفن را وارد کنید.';return}
  m.className='mu';m.textContent='در حال بررسی…';
  api('rpc/shop_customer_confirm',{method:'POST',body:{p_code:c,p_phone4:p}}).then(function(r){
-  if(r==='ok'||r==='already'){m.className='okc';m.textContent=r==='ok'?'تأیید دریافت شما با موفقیت ثبت شد.':'دریافت این سفارش قبلاً تأیید شده است.'}
+  if(r==='ok'||r==='already'){m.className='okc';m.textContent=r==='ok'?'تأیید دریافت شما با موفقیت ثبت شد. اکنون کد یکتای سفارش برای ارسال به مدیر آماده است.':'دریافت این سفارش قبلاً تأیید شده است.';openTrack();setTimeout(function(){if($('tc')){$('tc').value=c;doTrack()}},250)}
   else if(r==='not_ready'){m.className='err';m.textContent='این سفارش هنوز به مرحله تحویل نرسیده است.'}
   else{m.className='err';m.textContent='کد پیگیری یا چهار رقم آخر تلفن صحیح نیست.'}
  }).catch(function(){m.className='err';m.textContent='ارتباط با سامانه برقرار نشد؛ دوباره تلاش کنید.'});
@@ -278,8 +280,9 @@ function custConfirm(){var p=toEn(val('tp4').trim());if(!/^\d{4}$/.test(p)){$('t
  api('rpc/shop_customer_confirm',{method:'POST',body:{p_code:TR,p_phone4:p}}).then(function(r){
   if(r==='ok'||r==='already')doTrack();
   else $('tm').textContent=r==='not_ready'?'هنوز سفارش به ارسال‌کننده تحویل داده نشده است.':'اطلاعات با سفارش مطابقت ندارد.'}).catch(function(){$('tm').textContent='خطا در اتصال.'})}
-function odeliver(i){var c=prompt('کد یکتای سفارش را وارد کنید (مشتری هنگام تحویل کد را اعلام می‌کند):');if(!c)return;
- api('rpc/shop_admin_deliver',{method:'POST',body:{p_order_id:O[i].id,p_code:c.trim()}}).then(ordersView).catch(function(e){alert(errMsg(e)||'انجام نشد')})}
+function odeliver(i){var c=toEn(val('odcode_'+i).trim()).toUpperCase();if(!c){alert('کد یکتای سفارش در کادر مخصوص وارد نشده است.');return}
+ if(c!==String(O[i].tracking_code||'').toUpperCase()){alert('کد واردشده با کد یکتای همین سفارش مطابقت ندارد.');return}
+ api('rpc/shop_admin_deliver',{method:'POST',body:{p_order_id:O[i].id,p_code:c}}).then(function(){alert('تحویل نهایی همین سفارش با موفقیت ثبت شد.');ordersView()}).catch(function(e){alert(errMsg(e)||'ثبت تحویل نهایی انجام نشد')})}
 function dt(x){return x?new Date(x).toLocaleString('fa-IR'):'—'}
 function printDoc(h){if(!token)return;var d=document.createElement('div');d.id='pa';d.innerHTML=h;document.body.appendChild(d);document.body.classList.add('pr');
  var done=function(){document.body.classList.remove('pr');var e=$('pa');if(e)e.remove();window.removeEventListener('afterprint',done)};
