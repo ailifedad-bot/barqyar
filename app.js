@@ -155,17 +155,22 @@ function go(el,k){
  else{$('f_n').value=val('nm');$('f_p').value=val('ph');$('f_a').value=val('ad');$('f_o').value=t}
  return true;
 }
-function openTrack(){show('track');$('in').innerHTML='<h3 style="margin:0 0 8px">پیگیری سفارش</h3><input id="tc" placeholder="کد پیگیری (مثلاً BY-AB12CD)" dir="ltr"><button class="btn" onclick="doTrack()">پیگیری</button><div id="tr" style="margin-top:10px"></div>'}
-
-function doTrack(){var c=val('tc').trim();if(!c)return;
- api('rpc/shop_track_order',{method:'POST',body:{p_code:c}}).then(function(d){
+function openTrack(){show('track');var hc=val('homeTrackCode').trim();$('in').innerHTML='<h3 style="margin:0 0 8px">پیگیری سفارش</h3><input id="tc" placeholder="کد پیگیری (مثلاً BY-AB12CD)" dir="ltr" autocomplete="off" value="'+esc(hc)+'"><button class="btn" onclick="doTrack()">پیگیری</button><div id="tr" style="margin-top:10px"></div>'}
+function copyTrackInfo(){var c=TR||'',p=val('tp4')||val('homePhone4');var t='کد پیگیری: '+c+'\nچهار رقم آخر شماره تلفن: '+p;if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){alert('کد پیگیری و چهار رقم آخر تلفن کپی شد.')}).catch(function(){alert('کپی خودکار انجام نشد؛ اطلاعات در همین صفحه نمایش داده می‌شود.')})}else{alert(t)}}
+function doTrack(){var c=val('tc').trim().toUpperCase();if(!c)return;
+ $('tr').innerHTML='<p class="mu">در حال دریافت اطلاعات سفارش…</p>';
+ api('rpc/shop_track_order_details',{method:'POST',body:{p_code:c}}).then(function(d){
   if(!d||!d.length){$('tr').innerHTML='<p class="err">سفارشی با این کد پیدا نشد.</p>';return}
-  var o=d[0];TR=c;
+  var o=d[0],phone4=String(o.phone4||'');TR=o.tracking_code||c;
+  if($('homeTrackCode'))$('homeTrackCode').value=TR;
+  if($('homePhone4'))$('homePhone4').value=phone4;
   var h='<div class="ar"><b>وضعیت: '+ST[o.status]+'</b><div class="mu">'+new Date(o.created_at).toLocaleString('fa-IR')+' · '+pr(o.total)+'</div></div>';
+  h+='<div class="cfbox"><b>اطلاعات تأیید همین سفارش</b><p class="mu" style="margin:6px 0">کد پیگیری و چهار رقم آخر تلفن به‌صورت خودکار برای همین سفارش دریافت شد.</p><div class="mu">کد پیگیری</div><b dir="ltr">'+esc(TR)+'</b><div class="mu" style="margin-top:8px">چهار رقم آخر شماره تلفن ثبت‌شده</div><input id="tp4" type="tel" inputmode="numeric" maxlength="4" value="'+esc(phone4)+'" placeholder="در اطلاعات سفارش ثبت نشده" dir="ltr"><button class="btn gh" onclick="copyTrackInfo()">کپی کد و چهار رقم آخر</button></div>';
   if(o.customer_confirmed_at)h+='<div class="cfok">✅ شما دریافت کالا را تأیید کرده‌اید<br><small>'+new Date(o.customer_confirmed_at).toLocaleString('fa-IR')+'</small></div>';
-  else if(o.status==='shipping'||o.status==='done')h+='<div class="cfbox"><div style="font-weight:700;margin-bottom:6px">کالای سفارش را دریافت کرده‌اید؟</div><input id="tp4" inputmode="numeric" maxlength="4" placeholder="۴ رقم آخر شماره تلفن سفارش" dir="ltr"><button class="cfbtn" onclick="custConfirm()">✅ تأیید نهایی دریافت کالا</button><p id="tm" class="err"></p></div>';
+  else if(o.status==='shipping'||o.status==='done')h+='<div class="cfbox"><div style="font-weight:700;margin-bottom:6px">کالای سفارش را دریافت کرده‌اید؟</div><button class="cfbtn" onclick="custConfirm()">✅ تأیید نهایی دریافت کالا</button><p id="tm" class="err"></p></div>';
+  else h+='<p class="mu">فرم تأیید دریافت پس از ارسال سفارش فعال می‌شود.</p>';
   if(o.delivered_at)h+='<div class="dlok">📦 تحویل نهایی توسط مدیر ثبت شد<br><small>'+new Date(o.delivered_at).toLocaleString('fa-IR')+'</small></div>';
-  $('tr').innerHTML=h}).catch(function(){$('tr').innerHTML='<p class="err">خطا در اتصال.</p>'})}
+  $('tr').innerHTML=h}).catch(function(){$('tr').innerHTML='<p class="err">خطا در اتصال به سامانه پیگیری سفارش.</p>'})}
 /* مدیر */
 function adminView(){
  if(!token||!managerAccess){loginView('برای ورود به مدیریت، حساب مدیر مجاز لازم است.');return}
@@ -250,7 +255,7 @@ function homeCustConfirm(){
   else{m.className='err';m.textContent='کد پیگیری یا چهار رقم آخر تلفن صحیح نیست.'}
  }).catch(function(){m.className='err';m.textContent='ارتباط با سامانه برقرار نشد؛ دوباره تلاش کنید.'});
 }
-function custConfirm(){var p=toEn(val('tp4').trim());if(!/^\d{4}$/.test(p)){$('tm').textContent='۴ رقم آخر شماره تلفن را وارد کنید.';return}
+function custConfirm(){var p=toEn(val('tp4').trim());if(!/^\d{4}$/.test(p)){$('tm').textContent='چهار رقم آخر تلفن در اطلاعات این سفارش موجود نیست یا معتبر نیست.';return}
  api('rpc/shop_customer_confirm',{method:'POST',body:{p_code:TR,p_phone4:p}}).then(function(r){
   if(r==='ok'||r==='already')doTrack();
   else $('tm').textContent=r==='not_ready'?'هنوز سفارش به ارسال‌کننده تحویل داده نشده است.':'اطلاعات با سفارش مطابقت ندارد.'}).catch(function(){$('tm').textContent='خطا در اتصال.'})}
