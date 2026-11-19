@@ -214,9 +214,9 @@ function ordersView(){api('shop_orders?select=*&order=created_at.desc&limit=100'
 function reportView(){
  api('shop_orders?select=*&status=neq.cancelled&order=created_at.desc&limit=1000').then(function(d){
   d=d||[];O=d;
-  var done=d.filter(function(o){return o.status==='done'});
-  var waitCustomer=d.filter(function(o){return o.status==='shipping'&&!o.customer_confirmed_at&&!o.delivered_at});
-  var waitManager=d.filter(function(o){return o.status==='shipping'&&!!o.customer_confirmed_at&&!o.delivered_at});
+  var done=d.filter(function(o){return o.status==='done'&&!!o.customer_confirmed_at&&!!o.delivered_at&&o.delivery_verified===true});
+  var waitCustomer=d.filter(function(o){return o.status==='shipping'&&!o.customer_confirmed_at&&!o.delivered_at&&!o.delivery_verified});
+  var waitManager=d.filter(function(o){return o.status==='shipping'&&!!o.customer_confirmed_at&&!o.delivered_at&&!o.delivery_verified});
   var early=d.filter(function(o){return ['new','confirmed','preparing'].indexOf(o.status)>-1});
   var review=d.filter(function(o){return done.indexOf(o)<0&&waitCustomer.indexOf(o)<0&&waitManager.indexOf(o)<0&&early.indexOf(o)<0});
   var now=Date.now(),day=864e5,s=new Date();s.setHours(0,0,0,0);
@@ -234,7 +234,7 @@ function reportView(){
    if(kind==='customer')action='<div class="rpt-action">اقدام مدیر: فعلاً تأیید نهایی نکنید. با مشتری پیگیری کنید تا پس از دریافت واقعی کالا، از لینک پیگیری سفارش دریافت را تأیید کند.</div>';
    if(kind==='manager')action='<div class="rpt-action">اقدام لازم: کد یکتای همین سفارش را بررسی کنید و پس از تطبیق، تأیید نهایی مدیر را ثبت کنید.</div><label class="rpt-label" for="odcode_'+i+'">کد یکتای همین سفارش</label><input class="rpt-code" id="odcode_'+i+'" dir="ltr" autocomplete="off" value="'+esc(o.tracking_code||'')+'"><button class="rpt-btn rpt-btn-purple" onclick="odeliver('+i+')">تأیید نهایی توسط مدیر</button>';
    if(kind==='early')action='<div class="rpt-action">اقدام بعدی: '+(o.status==='new'?'مدیر سفارش را بررسی و تأیید کند.':o.status==='confirmed'?'مدیر آماده‌سازی کالا را ثبت کند.':'مدیر تحویل سفارش به ارسال‌کننده را ثبت کند.')+'</div>';
-   if(kind==='review')action='<div class="rpt-action">اقدام لازم: وضعیت این سفارش با مراحل استاندارد همخوان نیست. پیش از هر تأیید، جزئیات آن را در بخش سفارش‌ها بررسی کنید.</div>';
+   if(kind==='review')action=o.status==='done'?'<div class="rpt-warning">این سفارش در جدول با وضعیت «تحویل‌شده» ثبت شده، اما حداقل یکی از مدارک تأیید مشتری یا تأیید نهایی مدیر ناقص است. بنابراین در شمار تکمیل‌شده‌ها قرار نمی‌گیرد. مدیر باید سوابق را بررسی کند؛ اطلاعات قبلی به‌صورت خودکار تغییر داده نشده است.</div>':'<div class="rpt-action">اقدام لازم: وضعیت این سفارش با مراحل استاندارد همخوان نیست. پیش از هر تأیید، جزئیات آن را در بخش سفارش‌ها بررسی کنید.</div>';
    var history=(o.customer_confirmed_at?'<span class="tag c">✔ تأیید مشتری · '+dt(o.customer_confirmed_at)+'</span>':'')+(o.delivered_at?'<span class="tag d">✔ تأیید نهایی مدیر · '+dt(o.delivered_at)+'</span>':'');
    if(kind==='done'&&!o.delivered_at)history+='<div class="rpt-warning">نکته سوابق: وضعیت سفارش «تکمیل‌شده» است، اما زمان تحویل نهایی در رکورد ثبت نشده است. وضعیت سفارش تغییر داده نشده؛ این مورد را برای تکمیل سوابق بررسی کنید.</div>';
    return '<article class="rpt-order"><div class="rpt-order-head"><b>'+esc(o.customer_name||'مشتری')+'</b><span class="st">'+esc(ST[o.status]||o.status||'نامشخص')+'</span></div><div class="rpt-meta">کد یکتا: <b dir="ltr">'+esc(o.tracking_code||'ثبت نشده')+'</b></div><div class="rpt-meta">'+esc(o.phone||'')+' · '+dt(o.created_at)+'</div><div class="rpt-meta">'+esc(o.address||'')+'</div>'+items.map(function(x){return '<div class="rpt-item">• '+esc(x.name)+' × '+f(x.qty)+(x.unit?' '+esc(x.unit):'')+(x.price?' · '+pr(Number(x.qty||0)*Number(x.price||0)):'')+'</div>'}).join('')+'<div class="rpt-total">مبلغ سفارش: '+pr(o.total)+'</div>'+(history?'<div class="rpt-history">'+history+'</div>':'')+action+'</article>';
@@ -242,11 +242,11 @@ function reportView(){
   function group(title,desc,cls,arr,kind){
    return '<section class="rpt-group '+cls+'"><div class="rpt-group-head"><div><b>'+title+'</b><p>'+desc+'</p></div><strong>'+f(arr.length)+'</strong></div>'+(arr.length?arr.map(function(o){return orderCard(o,kind)}).join(''):'<p class="rpt-empty">در حال حاضر سفارشی در این گروه وجود ندارد.</p>')+'</section>';
   }
-  h+=group('سفارش‌های تکمیل‌شده','دریافت مشتری تأیید و تحویل نهایی مدیر ثبت شده است. اقدام لازم: بایگانی سند PDF.','rpt-green',done,'done');
+  h+=group('سفارش‌های تکمیل‌شده','تأیید مشتری و تأیید نهایی مدیر هر دو با زمان و نشان تأیید معتبر در پایگاه داده ثبت شده‌اند.','rpt-green',done,'done');
   h+=group('در انتظار تأیید مشتری','سفارش ارسال شده است؛ مشتری باید پس از دریافت واقعی کالا، دریافت را از طریق کد پیگیری تأیید کند.','rpt-amber',waitCustomer,'customer');
   h+=group('در انتظار تأیید مدیر','تأیید دریافت مشتری ثبت شده است؛ مدیر باید کد یکتا را کنترل و تحویل نهایی را ثبت کند.','rpt-purple',waitManager,'manager');
   if(early.length)h+=group('در مراحل اولیه پردازش','این سفارش‌ها هنوز به مرحله ارسال نرسیده‌اند و جزو سه گروه تحویل نیستند.','rpt-blue',early,'early');
-  if(review.length)h+=group('نیازمند بررسی وضعیت','اطلاعات این سفارش‌ها با مراحل استاندارد مطابقت ندارد؛ قبل از اقدام، بررسی شوند.','rpt-red',review,'review');
+  if(review.length)h+=group('نیازمند بررسی وضعیت','این سفارش‌ها تأییدهای کامل و قابل استناد ندارند یا وضعیت آن‌ها با مراحل استاندارد همخوان نیست؛ پیش از اقدام بررسی شوند.','rpt-red',review,'review');
   var active=d.filter(function(o){return o.status!=='cancelled'});
   h+='<h4 class="rpt-fin-title">خلاصه مالی سفارش‌ها</h4><div class="g2">'+R.map(function(r){var l=active.filter(function(o){return new Date(o.created_at).getTime()>=r[1]});var t=l.reduce(function(a,o){return a+Number(o.total||0)},0);return '<div class="ar"><div class="mu">'+r[0]+'</div><b>'+pr(t)+'</b><div class="mu">'+f(l.length)+' سفارش</div></div>'}).join('')+'</div>';
   var m={};active.forEach(function(o){(Array.isArray(o.items)?o.items:[]).forEach(function(x){var e=m[x.name]||(m[x.name]={q:0,t:0});e.q+=Number(x.qty||0);e.t+=Number(x.qty||0)*Number(x.price||0)})});
