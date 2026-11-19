@@ -91,7 +91,8 @@ function masterSave(code){
 }
 
 /* ---- بهبودها: عکس کالا، کد پیگیری، گزارش، اعلان ---- */
-var productPollT=null;\nvar ST={new:'جدید',confirmed:'تأییدشده',preparing:'آماده‌سازی',shipping:'در حال ارسال',done:'تحویل‌شده',cancelled:'لغوشده'};
+var productPollT=null;
+var ST={new:'جدید',confirmed:'تأییدشده',preparing:'آماده‌سازی',shipping:'در حال ارسال',done:'تحویل‌شده',cancelled:'لغوشده'};
 var code='',pollT=null,lastNew=-1;
 function genCode(){var a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',s='BY-',b=new Uint8Array(6);crypto.getRandomValues(b);for(var i=0;i<6;i++)s+=a[b[i]%a.length];return s}
 function draw(){
