@@ -1,5 +1,6 @@
 var SB='https://zgswoheckqasqoclhodg.supabase.co',KEY='sb_publishable_Gs5TQ0bdmhNvboT6_1gU3Q_mzmnv2Ny';
-var WA='989366428816',TG='makekzir',MAIL='makealmatykz@gmail.com';
+var WA='989366428816',TG='makekzir',MAIL='makealmatykz@gmail.com',APP_URL='https://ailifedad-bot.github.io/barqyar/';
+function returnAppUrl(c){return APP_URL+(c?'?track='+encodeURIComponent(c):'')+'#homeConfirm'}
 var P=[],cat='همه',cart={},saved=false,mode='',token=null,managerAccess=false,tab='orders',O=[];
 function $(i){return document.getElementById(i)}
 function f(n){return Number(n||0).toLocaleString('fa-IR')}
@@ -36,19 +37,19 @@ function cartView(){
  var nm=val('nm'),ph=val('ph'),ad=val('ad');
  $('in').innerHTML='<h3 style="margin:0 0 6px">سبد خرید</h3>'+h+'<div class="tot">جمع کل: '+pr(L.t)+'</div>'+
  '<input id="nm" placeholder="نام و نام خانوادگی" value="'+esc(nm)+'"><input id="ph" type="tel" placeholder="شماره تماس" value="'+esc(ph)+'"><textarea id="ad" rows="2" placeholder="آدرس تحویل">'+esc(ad)+'</textarea>'+
- '<p id="er" class="err"></p><div id="orderReceipt" class="cfbox" style="display:none;margin:10px 0"></div><p class="mu">ثبت و ارسال سفارش از طریق:</p>'+
+ '<div class="cfbox" style="margin:10px 0"><b>راهنمای مشتری</b><p class="mu" style="margin:6px 0">۱) اطلاعات تماس و نشانی را دقیق وارد کنید. ۲) پیام سفارش را در واتس‌اپ یا ایمیل ارسال کنید. ۳) کد پیگیری را نگه دارید. ۴) پس از تحویل واقعی کالا، از بخش پیگیری سفارش دریافت را تأیید کنید. ۵) تأیید نهایی مدیر پس از تأیید شما ثبت می‌شود.</p></div><p id="er" class="err"></p><div id="orderReceipt" class="cfbox" style="display:none;margin:10px 0"></div><p class="mu">روش ارسال سفارش:</p>'+
  '<a class="btn wa" target="_blank" rel="noopener" href="#" onclick="return go(this,\'wa\')">واتس‌اپ</a>'+
  '<a class="btn tg" target="_blank" rel="noopener" href="https://t.me/'+TG+'" onclick="return go(this,\'tg\')">تلگرام (@'+TG+')</a>'+
  '<form method="POST" action="https://formsubmit.co/'+MAIL+'" target="_blank" onsubmit="return go(this,\'mail\')">'+
- '<input type="hidden" name="_subject" value="سفارش جدید برق‌یار"><input type="hidden" name="_captcha" value="false"><input type="hidden" name="_template" value="table">'+
+ '<input type="hidden" name="_subject" value="سفارش جدید برق‌یار"><input type="hidden" name="_captcha" value="false"><input type="hidden" name="_template" value="table"><input type="hidden" name="_next" id="f_next"><input type="hidden" name="return_link" id="f_return">'+
  '<input type="hidden" name="name" id="f_n"><input type="hidden" name="phone" id="f_p"><input type="hidden" name="address" id="f_a"><input type="hidden" name="order" id="f_o">'+
  '<button class="btn gh" type="submit">ایمیل</button></form>';
 }
 function openContact(){show('contact');
  $('in').innerHTML='<h3 style="margin:0 0 6px">تماس با ما</h3><a class="btn gh" href="tel:09366428816">📞 تماس تلفنی: ۰۹۳۶۶۴۲۸۸۱۶</a><a class="btn wa" target="_blank" rel="noopener" href="https://wa.me/'+WA+'">واتس‌اپ</a><a class="btn tg" target="_blank" rel="noopener" href="https://t.me/'+TG+'">تلگرام (@'+TG+')</a>'+
  '<h4 style="margin:16px 0 6px">ارسال پیام</h4><form method="POST" action="https://formsubmit.co/'+MAIL+'" target="_blank">'+
- '<input type="hidden" name="_subject" value="پیام جدید از برق‌یار"><input type="hidden" name="_captcha" value="false"><input type="hidden" name="_template" value="table">'+
- '<input name="name" placeholder="نام" required><input name="phone" type="tel" placeholder="شماره تماس" required><textarea name="message" rows="3" placeholder="پیام شما" required></textarea><button class="btn" type="submit">ارسال پیام</button></form>';
+ '<input type="hidden" name="_subject" value="پیام جدید از برق‌یار"><input type="hidden" name="_captcha" value="false"><input type="hidden" name="_template" value="table"><input type="hidden" name="_next" value="'+esc(returnAppUrl(''))+'"><input type="hidden" name="return_link" value="'+esc(returnAppUrl(''))+'">'+
+ '<input name="name" placeholder="نام" required><input name="phone" type="tel" placeholder="شماره تماس" required><textarea name="message" rows="3" placeholder="پیام شما" required></textarea><button class="btn" type="submit">ارسال پیام</button><p class="mu">پس از ارسال پیام، با لینک بازگشت به برنامه برق‌یار برمی‌گردید.</p></form>';
 }
 /* ---------- مدیر ---------- */
 function openAdmin(){show('admin');token&&managerAccess?adminView():loginView()}
@@ -143,7 +144,7 @@ function draw(){
  }).join(''):'<p class="mu" style="grid-column:1/-1;text-align:center">کالایی پیدا نشد</p>';
  var L=lines();$('bar').className='bar'+(L.n?'':' h');$('bn').textContent='مشاهده سبد ('+f(L.n)+' کالا)';$('bt').textContent=pr(L.t);
 }
-function orderText(){var L=lines();return 'سفارش جدید از برق‌یار\nکد پیگیری: '+code+'\n'+L.a.map(function(i){return '• '+i.name+' × '+i.qty+' ('+i.unit+') = '+en(i.qty*i.price)}).join('\n')+'\nجمع کل: '+en(L.t)+'\nنام: '+val('nm')+'\nتلفن: '+val('ph')+'\nآدرس: '+val('ad')}
+function orderText(){var L=lines(),p=toEn(val('ph').trim()).replace(/\D/g,'').slice(-4),back=returnAppUrl(code);return 'سفارش جدید از برق‌یار\nکد پیگیری: '+code+'\nچهار رقم آخر تلفن مشتری: '+p+'\n'+L.a.map(function(i){return '• '+i.name+' × '+i.qty+' ('+i.unit+') = '+en(i.qty*i.price)}).join('\n')+'\nجمع کل: '+en(L.t)+'\nنام: '+val('nm')+'\nتلفن: '+val('ph')+'\nآدرس: '+val('ad')+'\n\nبرای بازگشت به برنامه برق‌یار و پیگیری همین سفارش، این لینک را باز کنید:\n'+back}
 function showOrderReceipt(){
  var phone=toEn(val('ph').trim()).replace(/\D/g,'');
  var last4=phone.slice(-4);TR=code;
@@ -168,7 +169,7 @@ function go(el,k){
  $('er').className='okc';$('er').textContent='سفارش آماده ارسال شد. کد پیگیری و چهار رقم آخر تلفن در همین صفحه نمایش داده شده است.';
  if(k==='wa'){el.href='https://wa.me/'+WA+'?text='+encodeURIComponent(t)}
  else if(k==='tg'){try{navigator.clipboard.writeText(t)}catch(e){}$('er').textContent+=' — متن سفارش کپی شد؛ در تلگرام Paste و ارسال کنید.'}
- else{$('f_n').value=val('nm');$('f_p').value=val('ph');$('f_a').value=val('ad');$('f_o').value=t}
+ else{$('f_n').value=val('nm');$('f_p').value=val('ph');$('f_a').value=val('ad');$('f_o').value=t;$('f_next').value=returnAppUrl(code);$('f_return').value=returnAppUrl(code)}
  return true;
 }
 function openTrack(){show('track');var hc=val('homeTrackCode').trim();$('in').innerHTML='<h3 style="margin:0 0 8px">پیگیری سفارش</h3><input id="tc" placeholder="کد پیگیری (مثلاً BY-AB12CD)" dir="ltr" autocomplete="off" value="'+esc(hc)+'"><button class="btn" onclick="doTrack()">پیگیری</button><div id="tr" style="margin-top:10px"></div>'}
@@ -271,6 +272,8 @@ function homeCustConfirm(){
   else{m.className='err';m.textContent='کد پیگیری یا چهار رقم آخر تلفن صحیح نیست.'}
  }).catch(function(){m.className='err';m.textContent='ارتباط با سامانه برقرار نشد؛ دوباره تلاش کنید.'});
 }
+function restoreTrackFromLink(){try{var u=new URL(window.location.href),c=(u.searchParams.get('track')||'').trim().toUpperCase();if(!c)return;if($('homeTrackCode'))$('homeTrackCode').value=c;var hc=$('homeConfirm');if(hc)hc.scrollIntoView({behavior:'smooth',block:'start'});openTrack();setTimeout(function(){if($('tc')){$('tc').value=c;doTrack()}},350)}catch(e){console.warn('Tracking return link could not be processed',e)}}
+window.addEventListener('load',function(){setTimeout(restoreTrackFromLink,250)});
 function custConfirm(){var p=toEn(val('tp4').trim());if(!/^\d{4}$/.test(p)){$('tm').textContent='چهار رقم آخر تلفن در اطلاعات این سفارش موجود نیست یا معتبر نیست.';return}
  api('rpc/shop_customer_confirm',{method:'POST',body:{p_code:TR,p_phone4:p}}).then(function(r){
   if(r==='ok'||r==='already')doTrack();
