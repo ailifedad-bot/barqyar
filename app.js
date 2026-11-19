@@ -36,7 +36,7 @@ function cartView(){
  var nm=val('nm'),ph=val('ph'),ad=val('ad');
  $('in').innerHTML='<h3 style="margin:0 0 6px">سبد خرید</h3>'+h+'<div class="tot">جمع کل: '+pr(L.t)+'</div>'+
  '<input id="nm" placeholder="نام و نام خانوادگی" value="'+esc(nm)+'"><input id="ph" type="tel" placeholder="شماره تماس" value="'+esc(ph)+'"><textarea id="ad" rows="2" placeholder="آدرس تحویل">'+esc(ad)+'</textarea>'+
- '<p id="er" class="err"></p><p class="mu">ثبت و ارسال سفارش از طریق:</p>'+
+ '<p id="er" class="err"></p><div id="orderReceipt" class="cfbox" style="display:none;margin:10px 0"></div><p class="mu">ثبت و ارسال سفارش از طریق:</p>'+
  '<a class="btn wa" target="_blank" rel="noopener" href="#" onclick="return go(this,\'wa\')">واتس‌اپ</a>'+
  '<a class="btn tg" target="_blank" rel="noopener" href="https://t.me/'+TG+'" onclick="return go(this,\'tg\')">تلگرام (@'+TG+')</a>'+
  '<form method="POST" action="https://formsubmit.co/'+MAIL+'" target="_blank" onsubmit="return go(this,\'mail\')">'+
@@ -144,12 +144,28 @@ function draw(){
  var L=lines();$('bar').className='bar'+(L.n?'':' h');$('bn').textContent='مشاهده سبد ('+f(L.n)+' کالا)';$('bt').textContent=pr(L.t);
 }
 function orderText(){var L=lines();return 'سفارش جدید از برق‌یار\nکد پیگیری: '+code+'\n'+L.a.map(function(i){return '• '+i.name+' × '+i.qty+' ('+i.unit+') = '+en(i.qty*i.price)}).join('\n')+'\nجمع کل: '+en(L.t)+'\nنام: '+val('nm')+'\nتلفن: '+val('ph')+'\nآدرس: '+val('ad')}
+function showOrderReceipt(){
+ var phone=toEn(val('ph').trim()).replace(/\D/g,'');
+ var last4=phone.slice(-4);
+ if($('homeTrackCode'))$('homeTrackCode').value=code;
+ if($('homePhone4'))$('homePhone4').value=last4;
+ var r=$('orderReceipt');
+ if(r){r.style.display='block';r.innerHTML='<b>✅ سفارش شما آماده ارسال در واتس‌اپ است</b><p class="mu" style="margin:6px 0">اطلاعات پیگیری همین سفارش به‌صورت خودکار آماده شد:</p><div>کد پیگیری: <b dir="ltr">'+esc(code)+'</b></div><div>چهار رقم آخر تلفن ثبت‌شده: <b dir="ltr">'+esc(last4)+'</b></div><button type="button" class="btn gh" onclick="openTrackForCurrentOrder()">پیگیری همین سفارش</button><button type="button" class="btn gh" onclick="copyTrackInfo()">کپی اطلاعات پیگیری</button>'}
+ var hc=$('homeConfirm');if(hc)hc.scrollIntoView({behavior:'smooth',block:'nearest'});
+ try{sessionStorage.setItem('barqyar_last_order',JSON.stringify({code:code,phone4:last4}))}catch(e){}
+}
+function openTrackForCurrentOrder(){
+ var c=val('homeTrackCode').trim();if(!c)return;
+ openTrack();
+ setTimeout(function(){if($('tc')){$('tc').value=c;doTrack()}},450);
+}
 function go(el,k){
  if(!val('nm').trim()||!val('ph').trim()||!val('ad').trim()){$('er').textContent='لطفاً نام، شماره تماس و آدرس را کامل کنید.';return false}
  var L=lines();
  if(!saved){saved=true;code=genCode();api('shop_orders',{method:'POST',prefer:'return=minimal',keep:1,body:{customer_name:val('nm').trim(),phone:toEn(val('ph').trim()),address:val('ad').trim(),items:L.a,total:L.t,tracking_code:code}}).catch(function(e){saved=false;var m=errMsg(e),r=$('er');if(r){r.className='err';r.textContent='سفارش از طریق پیام ارسال شد، ولی در سامانه ثبت نشد'+(m?': '+m:'')+'. اپراتور از روی پیام پیگیری می‌کند.'}})}
  var t=orderText();
- $('er').className='okc';$('er').textContent='سفارش ثبت شد. کد پیگیری شما: '+code+' (آن را نگه دارید)';
+ showOrderReceipt();
+ $('er').className='okc';$('er').textContent='سفارش آماده ارسال شد. کد پیگیری و چهار رقم آخر تلفن در همین صفحه نمایش داده شده است.';
  if(k==='wa'){el.href='https://wa.me/'+WA+'?text='+encodeURIComponent(t)}
  else if(k==='tg'){try{navigator.clipboard.writeText(t)}catch(e){}$('er').textContent+=' — متن سفارش کپی شد؛ در تلگرام Paste و ارسال کنید.'}
  else{$('f_n').value=val('nm');$('f_p').value=val('ph');$('f_a').value=val('ad');$('f_o').value=t}
