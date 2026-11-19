@@ -1,6 +1,6 @@
 var SB='https://zgswoheckqasqoclhodg.supabase.co',KEY='sb_publishable_Gs5TQ0bdmhNvboT6_1gU3Q_mzmnv2Ny';
 var WA='989366428816',TG='makekzir',MAIL='makealmatykz@gmail.com';
-var P=[],cat='همه',cart={},saved=false,mode='',token=null,tab='orders',O=[];
+var P=[],cat='همه',cart={},saved=false,mode='',token=null,managerAccess=false,tab='orders',O=[];
 function $(i){return document.getElementById(i)}
 function f(n){return Number(n||0).toLocaleString('fa-IR')}
 function pr(n){return f(n)+' ریال'}
@@ -38,13 +38,13 @@ function openContact(){show('contact');
  '<input name="name" placeholder="نام" required><input name="phone" type="tel" placeholder="شماره تماس" required><textarea name="message" rows="3" placeholder="پیام شما" required></textarea><button class="btn" type="submit">ارسال پیام</button></form>';
 }
 /* ---------- مدیر ---------- */
-function openAdmin(){show('admin');token?adminView():loginView()}
+function openAdmin(){show('admin');token&&managerAccess?adminView():loginView()}
 function loginView(m){$('in').innerHTML='<h3 style="margin:0 0 8px">ورود مدیر</h3><input id="em" type="email" placeholder="ایمیل" dir="ltr"><input id="pw" type="password" placeholder="رمز عبور" dir="ltr"><button class="btn" onclick="login()">ورود</button><p class="err">'+(m||'')+'</p>'}
 function login(){
  fetch(SB+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({email:val('em').trim(),password:val('pw')})})
- .then(function(r){return r.json()}).then(function(d){if(!d.access_token)return loginView('ایمیل یا رمز عبور اشتباه است.');token=d.access_token;adminView()}).catch(function(){loginView('خطا در اتصال.')})
+ .then(function(r){return r.json()}).then(function(d){if(!d.access_token)return loginView('ایمیل یا رمز عبور اشتباه است.');token=d.access_token;api('rpc/shop_is_admin').then(function(ok){if(ok===true){managerAccess=true;adminView()}else{token=null;managerAccess=false;loginView('این حساب در فهرست مدیران مجاز برق‌یار نیست.')}}).catch(function(){token=null;managerAccess=false;loginView('تأیید دسترسی مدیر انجام نشد. دوباره تلاش کنید.')})}).catch(function(){loginView('خطا در اتصال.')})
 }
-function logout(){token=null;closeSh()}
+function logout(){token=null;managerAccess=false;closeSh()}
 function fail(e){$('ab').innerHTML='<p class="err">دسترسی ندارید یا خطایی رخ داد. با ایمیل مدیر وارد شوید.</p>'}
 
 function ost(i,s){api('rpc/shop_admin_set_order_status',{method:'POST',body:{p_order_id:O[i].id,p_status:s}}).then(ordersView).catch(function(e){alert(errMsg(e)||'انجام نشد')})}
@@ -53,7 +53,40 @@ function psave(i){var b={name:val('pn'+i).trim(),category:val('pc'+i).trim(),pri
  if(!b.name||!b.category)return alert('نام و دسته را وارد کنید.');
  api('shop_products?id=eq.'+P[i].id,{method:'PATCH',prefer:'return=minimal',body:b}).then(function(){Object.assign(P[i],b);draw();alert('ذخیره شد')}).catch(function(){alert('ذخیره نشد')})}
 function pdel(i){if(confirm('این کالا حذف شود؟'))api('shop_products?id=eq.'+P[i].id,{method:'DELETE'}).then(function(){P.splice(i,1);draw();productsView()}).catch(function(){alert('حذف نشد')})}
-function padd(){api('shop_products',{method:'POST',prefer:'return=representation',body:{name:'کالای جدید',category:'متفرقه',unit:'عدد',price:0,emoji:'🔌',in_stock:false}}).then(function(d){P.unshift(d[0]);draw();productsView()}).catch(function(){alert('افزودن نشد')})}
+function padd(){api('shop_products',{method:'POST',prefer:'return=representation',body:{name:'کالای جدید',category:'متفرقه',unit:'عدد',price:0,stock_qty:0,emoji:'🔌',in_stock:false}}).then(function(d){P.unshift(d[0]);draw();productsView()}).catch(function(){alert('افزودن نشد')})}
+
+
+/* ---- جدول مادر کالا: بروزرسانی اختصاصی مدیر ---- */
+function masterView(){
+ $('ab').innerHTML='<div class="ar"><b>جدول مادر موجودی و قیمت کالاها</b><p class="mu">این جدول منبع اصلی اطلاعات کالاهاست. جستجو با کد یکتای کالا انجام می‌شود. برای کالاهای قدیمی، موجودی ثبت‌نشده خالی نمایش داده می‌شود و به‌صورت خودکار صفر فرض نمی‌شود.</p><input id="mcode" dir="ltr" placeholder="کد یکتای کالا، مانند BYK-000001"><button class="btn" onclick="masterFind()">جستجوی کالا</button><div id="mresult"></div></div><div id="masterlist" class="ar"><p class="mu">در حال دریافت فهرست کالاها…</p></div>';
+ api('shop_products?select=*&order=id').then(function(d){P=d||[];draw();masterListView()}).catch(fail);
+}
+function masterListView(){
+ var h='<b>فهرست کدهای یکتای کالا</b><p class="mu">تعداد کالاها: '+f(P.length)+'</p>';
+ h+=P.map(function(x){return '<div class="row"><div><b>'+esc(x.name)+'</b><div class="mu">موجودی: '+(x.stock_qty===null||x.stock_qty===undefined?'ثبت نشده':f(x.stock_qty))+' · قیمت: '+pr(x.price)+'</div></div><div dir="ltr" style="font-weight:700;white-space:nowrap">'+esc(x.sku||'بدون کد')+'</div></div>'}).join('');
+ $('masterlist').innerHTML=h;
+}
+function masterFind(){
+ var c=val('mcode').trim().toUpperCase();
+ if(!c){$('mresult').innerHTML='<p class="err">کد یکتای کالا را وارد کنید.</p>';return}
+ var x=P.filter(function(p){return String(p.sku||'').toUpperCase()===c})[0];
+ if(!x){$('mresult').innerHTML='<p class="err">کالایی با این کد پیدا نشد. فهرست کدها را بررسی کنید.</p>';return}
+ $('mresult').innerHTML='<div class="ar"><b>'+esc(x.name)+'</b><div class="mu">کد یکتا: <span dir="ltr">'+esc(x.sku)+'</span> · '+esc(x.category||'')+'</div><label>موجودی ('+esc(x.unit||'عدد')+')</label><input id="mqty" type="number" min="0" step="1" value="'+(x.stock_qty===null||x.stock_qty===undefined?'':Number(x.stock_qty))+'" placeholder="در صورت ثبت موجودی، تعداد را وارد کنید"><label>قیمت واحد (ریال)</label><input id="mprice" type="number" min="0" step="1" value="'+Number(x.price||0)+'"><p class="mu">اگر موجودی را خالی بگذارید، فقط قیمت بروزرسانی می‌شود.</p><button class="btn" onclick="masterSave(\''+esc(x.sku)+'\')">ذخیره تغییرات</button></div>';
+}
+function masterSave(code){
+ var raw=val('mqty').trim(),priceRaw=val('mprice').trim(),price=Number(priceRaw),body={price:price};
+ if(priceRaw===''||!Number.isFinite(price)||price<0){alert('قیمت معتبر و نامنفی وارد کنید.');return}
+ if(raw!==''){
+  var qty=Number(raw);
+  if(!Number.isFinite(qty)||qty<0||!Number.isInteger(qty)){alert('موجودی باید عدد صحیح و نامنفی باشد.');return}
+  body.stock_qty=qty;body.in_stock=qty>0;
+ }
+ api('shop_products?sku=eq.'+encodeURIComponent(code),{method:'PATCH',prefer:'return=representation',body:body}).then(function(d){
+  if(!d||!d.length)throw new Error('هیچ کالایی بروزرسانی نشد');
+  var x=P.filter(function(p){return p.sku===code})[0];if(x)Object.assign(x,body);
+  draw();masterListView();masterFind();alert('قیمت و اطلاعات موجودی کالا با موفقیت ذخیره شد.');
+ }).catch(function(e){alert('ذخیره انجام نشد. دسترسی مدیر یا اتصال Supabase را بررسی کنید. '+errMsg(e))});
+}
 
 /* ---- بهبودها: عکس کالا، کد پیگیری، گزارش، اعلان ---- */
 var ST={new:'جدید',confirmed:'تأییدشده',preparing:'آماده‌سازی',shipping:'در حال ارسال',done:'تحویل‌شده',cancelled:'لغوشده'};
@@ -100,8 +133,9 @@ function doTrack(){var c=val('tc').trim();if(!c)return;
   $('tr').innerHTML=h}).catch(function(){$('tr').innerHTML='<p class="err">خطا در اتصال.</p>'})}
 /* مدیر */
 function adminView(){
- $('in').innerHTML='<div class="row"><h3 style="margin:0">⚙️ مدیریت</h3><button class="link" onclick="logout()">خروج</button></div><div class="tabs"><button class="chip'+(tab==='orders'?' on':'')+'" onclick="tab=\'orders\';adminView()">سفارش‌ها</button><button class="chip'+(tab==='products'?' on':'')+'" onclick="tab=\'products\';adminView()">کالاها</button><button class="chip'+(tab==='report'?' on':'')+'" onclick="tab=\'report\';adminView()">گزارش</button></div>'+(tab==='report'?'<button class="btn dl" onclick="docFinal()">📄 گزارش نهایی بایگانی (چاپ / ذخیره PDF)</button>':'')+'<div id="ab"><p class="mu">در حال بارگذاری…</p></div>';
- tab==='orders'?ordersView():tab==='products'?productsView():reportView();
+ if(!token||!managerAccess){loginView('برای ورود به مدیریت، حساب مدیر مجاز لازم است.');return}
+ $('in').innerHTML='<div class="row"><h3 style="margin:0">⚙️ مدیریت</h3><button class="link" onclick="logout()">خروج</button></div><div class="tabs"><button class="chip'+(tab==='orders'?' on':'')+'" onclick="tab=\'orders\';adminView()">سفارش‌ها</button><button class="chip'+(tab==='products'?' on':'')+'" onclick="tab=\'products\';adminView()">کالاها</button><button class="chip'+(tab==='master'?' on':'')+'" onclick="tab=\'master\';adminView()">جدول مادر قیمت و موجودی</button><button class="chip'+(tab==='report'?' on':'')+'" onclick="tab=\'report\';adminView()">گزارش</button></div>'+(tab==='report'?'<button class="btn dl" onclick="docFinal()">📄 گزارش نهایی بایگانی (چاپ / ذخیره PDF)</button>':'')+'<div id="ab"><p class="mu">در حال بارگذاری…</p></div>';
+ tab==='orders'?ordersView():tab==='products'?productsView():tab==='master'?masterView():reportView();
  startPoll();
 }
 
