@@ -149,11 +149,11 @@ function ordersView(){api('shop_orders?select=*&order=created_at.desc&limit=100'
   if(o.status==='new')a+='<button onclick="ost('+i+',\'confirmed\')">تأیید سفارش</button>';
   if(o.status==='confirmed')a+='<button onclick="ost('+i+',\'preparing\')">آماده‌سازی</button>';
   if(o.status==='confirmed'||o.status==='preparing')a+='<button onclick="ost('+i+',\'shipping\')">تحویل به ارسال‌کننده</button>';
-  if(o.status==='shipping')a+='<button class="dlbtn" onclick="odeliver('+i+')">🟣 تحویل به مشتری و تأیید نهایی</button>';
+  if(o.status==='shipping'&&o.customer_confirmed_at)a+='<button class="dlbtn" onclick="odeliver('+i+')">🟣 ثبت تحویل نهایی مدیر</button>';
   if(o.status==='done')a+='<button onclick="docOrder('+i+')">📄 سند تحویل (PDF)</button>';
   if(o.status!=='done'&&o.status!=='cancelled')a+='<button onclick="ost('+i+',\'cancelled\')">لغو</button>';
   if(o.status!=='done')a+='<button onclick="odel('+i+')">حذف</button>';
-  return '<div class="ar'+(aw?' await':'')+'">'+(aw?'<div class="cfok" style="border-color:var(--dl);color:var(--dl);background:rgba(124,58,237,.1);margin:0 0 8px">مشتری دریافت کالا را تأیید کرد. تحویل نهایی را ثبت کنید.</div>':'')+
+  return '<div class="ar'+(aw?' await':'')+'">'+(aw?'<div class="cfok" style="border-color:var(--dl);color:var(--dl);background:rgba(124,58,237,.1);margin:0 0 8px">مشتری دریافت کالا را تأیید کرد. اکنون می‌توانید تحویل نهایی را ثبت کنید.</div>':(o.status==='shipping'?'<div class="cfbox">در انتظار تأیید دریافت توسط مشتری؛ پس از تأیید، دکمه تحویل نهایی فعال می‌شود.</div>':''))+
   '<div class="row" style="border:0"><b>'+esc(o.customer_name)+'</b><span class="st">'+ST[o.status]+'</span></div><div class="mu" dir="ltr" style="text-align:right">'+esc(o.tracking_code||'')+'</div><div class="mu">'+esc(o.phone)+' · '+new Date(o.created_at).toLocaleString('fa-IR')+'</div><div class="mu">'+esc(o.address)+'</div>'+
   o.items.map(function(x){return '<div style="font-size:13px">• '+esc(x.name)+' × '+f(x.qty)+(x.price?' · '+pr(x.price*x.qty):'')+'</div>'}).join('')+'<div class="tot" style="padding:6px 0">'+pr(o.total)+'</div>'+
   (o.customer_confirmed_at?'<span class="tag c">✔ تأیید مشتری</span>':'')+(o.delivered_at?'<span class="tag d">✔ تحویل نهایی مدیر</span>':'')+'<div class="acts">'+a+'</div></div>'}).join(''):'<p class="mu">هنوز سفارشی ثبت نشده است.</p>';
