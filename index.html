@@ -80,8 +80,8 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 <input id="q" placeholder="جستجوی کالا (مثلاً سیم، کلید، لامپ…)" oninput="draw()">
 </header>
 <section class="ar" id="homeConfirm" style="margin:10px 14px 4px">
- <b>تأیید دریافت سفارش</b>
- <p class="mu">برای تأیید دریافت کالا، کد پیگیری و چهار رقم آخر شماره تلفنی را که هنگام سفارش ثبت کرده‌اید وارد کنید.</p>
+ <b>پیگیری و تأیید دریافت سفارش</b>
+ <p class="mu">راهنمای مشتری: ابتدا کد سفارش را از پیام واتس‌اپ یا ایمیل باز کنید. پیگیری، وضعیت سفارش را نشان می‌دهد. فقط پس از دریافت واقعی کالا، چهار رقم آخر شماره ثبت‌شده را وارد و دریافت را تأیید کنید. پس از تأیید شما، مدیر تحویل نهایی را ثبت می‌کند.</p>
  <input id="homeTrackCode" dir="ltr" placeholder="کد پیگیری سفارش، مانند BY-AB12CD" autocomplete="off">
  <input id="homePhone4" type="tel" inputmode="numeric" maxlength="4" dir="ltr" placeholder="چهار رقم آخر شماره تلفن">
  <button class="btn" onclick="homeCustConfirm()">تأیید دریافت کالا</button>
@@ -93,7 +93,7 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 <div class="bar h" id="bar" onclick="openCart()"><span id="bn"></span><b id="bt"></b></div>
 <div class="sheet" id="sh" onclick="if(event.target===this)closeSh()"><div class="in" id="in"></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2"></script>
-<script src="app.js?v=barqyar-wa-order-receipt-v1-20261119"></script>
+<script src="app.js?v=barqyar-order-flow-return-v1-20261119"></script>
 
 <script>
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
