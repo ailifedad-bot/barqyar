@@ -11,7 +11,18 @@ function api(path,o){o=o||{};var h={apikey:KEY,Authorization:'Bearer '+(token||K
  return fetch(SB+'/rest/v1/'+path,{method:o.method||'GET',headers:h,body:o.body?JSON.stringify(o.body):undefined,keepalive:!!o.keep}).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error(t||r.status)});return r.status===204?null:r.text().then(function(t){return t?JSON.parse(t):null})})}
 function load(){refreshProducts()}
 function refreshProducts(){if(managerAccess)return;api('shop_products?select=*&order=id').then(function(d){P=d||[];draw();if(mode==='cart')cartView()}).catch(function(){if(!$('grid').innerHTML||$('grid').innerHTML.indexOf('در حال بارگذاری')>-1)$('grid').innerHTML='<p class="err" style="grid-column:1/-1;text-align:center">بارگذاری کالاها ناموفق بود. صفحه را دوباره باز کنید.</p>'})}
-function startProductPoll(){if(productPollT)return;productPollT=setInterval(refreshProducts,30000)}
+var productChannel=null,productRealtimeClient=null;
+function startProductRealtime(){
+ if(productChannel||!window.supabase||!window.supabase.createClient)return;
+ try{
+  productRealtimeClient=window.supabase.createClient(SB,KEY);
+  productChannel=productRealtimeClient.channel('barqyar-products-live')
+   .on('postgres_changes',{event:'*',schema:'public',table:'shop_products'},function(){refreshProducts()})
+   .subscribe(function(status){if(status==='SUBSCRIBED')console.log('Barqyar live product updates connected')});
+ }catch(e){console.warn('Realtime connection unavailable',e)}
+}
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')refreshProducts()});
+window.addEventListener('online',function(){refreshProducts()});
 function cats(){return ['همه'].concat(P.map(function(x){return x.category}).filter(function(v,i,a){return v&&a.indexOf(v)===i}))}
 function chg(id,d){cart[id]=Math.max(0,(cart[id]||0)+d);if(!cart[id])delete cart[id];saved=false;draw();if(mode==='cart')cartView()}
 function show(m){mode=m;$('sh').className='sheet o'}
@@ -64,9 +75,29 @@ function masterView(){
  api('shop_products?select=*&order=id').then(function(d){P=d||[];draw();masterListView()}).catch(fail);
 }
 function masterListView(){
- var h='<b>فهرست کدهای یکتای کالا</b><p class="mu">تعداد کالاها: '+f(P.length)+'</p>';
- h+=P.map(function(x){return '<div class="row"><div><b>'+esc(x.name)+'</b><div class="mu">موجودی: '+(x.stock_qty===null||x.stock_qty===undefined?'ثبت نشده':f(x.stock_qty))+' · قیمت: '+pr(x.price)+'</div></div><div dir="ltr" style="font-weight:700;white-space:nowrap">'+esc(x.sku||'بدون کد')+'</div></div>'}).join('');
+ var h='<b>جدول ویرایش مستقیم قیمت و موجودی</b><p class="mu">قیمت و موجودی را در ردیف همان کد تغییر دهید و ذخیره کنید. تغییرات برای کاربران به‌صورت خودکار ارسال می‌شود.</p>';
+ h+=P.map(function(x){
+  return '<div class="ar"><div class="row" style="border:0"><b>'+esc(x.name)+'</b><b dir="ltr">'+esc(x.sku||'بدون کد')+'</b></div>'+
+   '<div class="g"><label class="mu">موجودی ('+esc(x.unit||'عدد')+')<input id="mq_'+x.id+'" type="number" min="0" step="1" value="'+(x.stock_qty===null||x.stock_qty===undefined?'':Number(x.stock_qty))+'" placeholder="ثبت نشده"></label>'+
+   '<label class="mu">قیمت واحد (تومان)<input id="mp_'+x.id+'" type="number" min="0" step="1" value="'+Number(x.price||0)+'"></label></div>'+
+   '<button class="btn" onclick="masterSaveInline(\''+esc(x.sku||'')+'\','+x.id+')">ذخیره این کالا</button></div>';
+ }).join('');
  $('masterlist').innerHTML=h;
+}
+function masterSaveInline(code,id){
+ var raw=val('mq_'+id).trim(),priceRaw=val('mp_'+id).trim(),price=Number(priceRaw),body={price:price};
+ if(!code){alert('کد یکتای کالا موجود نیست.');return}
+ if(priceRaw===''||!Number.isFinite(price)||price<0){alert('قیمت معتبر و نامنفی وارد کنید.');return}
+ if(raw!==''){
+  var qty=Number(raw);
+  if(!Number.isFinite(qty)||qty<0||!Number.isInteger(qty)){alert('موجودی باید عدد صحیح و نامنفی باشد.');return}
+  body.stock_qty=qty;body.in_stock=qty>0;
+ }
+ api('shop_products?sku=eq.'+encodeURIComponent(code),{method:'PATCH',prefer:'return=representation',body:body}).then(function(d){
+  if(!d||!d.length)throw new Error('هیچ کالایی بروزرسانی نشد');
+  var x=P.filter(function(p){return p.id===id})[0];if(x)Object.assign(x,body);
+  draw();masterListView();alert('اطلاعات '+code+' ذخیره شد و برای کاربران به‌روزرسانی می‌شود.');
+ }).catch(function(e){alert('ذخیره انجام نشد. دسترسی مدیر یا اتصال Supabase را بررسی کنید. '+errMsg(e))});
 }
 function masterFind(){
  var c=val('mcode').trim().toUpperCase();
@@ -156,7 +187,7 @@ function ordersView(){api('shop_orders?select=*&order=created_at.desc&limit=100'
   return '<div class="ar'+(aw?' await':'')+'">'+(aw?'<div class="cfok" style="border-color:var(--dl);color:var(--dl);background:rgba(124,58,237,.1);margin:0 0 8px">مشتری دریافت کالا را تأیید کرد. اکنون می‌توانید تحویل نهایی را ثبت کنید.</div>':(o.status==='shipping'?'<div class="cfbox">در انتظار تأیید دریافت توسط مشتری؛ پس از تأیید، دکمه تحویل نهایی فعال می‌شود.</div>':''))+
   '<div class="row" style="border:0"><b>'+esc(o.customer_name)+'</b><span class="st">'+ST[o.status]+'</span></div><div class="mu" dir="ltr" style="text-align:right">'+esc(o.tracking_code||'')+'</div><div class="mu">'+esc(o.phone)+' · '+new Date(o.created_at).toLocaleString('fa-IR')+'</div><div class="mu">'+esc(o.address)+'</div>'+
   o.items.map(function(x){return '<div style="font-size:13px">• '+esc(x.name)+' × '+f(x.qty)+(x.price?' · '+pr(x.price*x.qty):'')+'</div>'}).join('')+'<div class="tot" style="padding:6px 0">'+pr(o.total)+'</div>'+
-  (o.customer_confirmed_at?'<span class="tag c">✔ تأیید مشتری</span>':'')+(o.delivered_at?'<span class="tag d">✔ تحویل نهایی مدیر</span>':'')+'<div class="acts">'+a+'</div></div>'}).join(''):'<p class="mu">هنوز سفارشی ثبت نشده است.</p>';
+  (o.customer_confirmed_at?'<span class="tag c">✔ تأیید مشتری · '+dt(o.customer_confirmed_at)+'</span>':'<span class="tag">در انتظار تأیید مشتری</span>')+(o.delivered_at?'<span class="tag d">✔ تأیید نهایی مدیر · '+dt(o.delivered_at)+'</span>':'')+'<div class="acts">'+a+'</div></div>'}).join(''):'<p class="mu">هنوز سفارشی ثبت نشده است.</p>';
  lastNew=O.filter(function(o){return o.status==='new'}).length;badge(lastNew)}).catch(fail)}
 function reportView(){api('shop_orders?select=created_at,total,items&status=neq.cancelled&order=created_at.desc&limit=1000').then(function(d){
  d=d||[];var now=Date.now(),day=864e5,s=new Date();s.setHours(0,0,0,0);
@@ -185,7 +216,7 @@ function chk(){if(!token){clearInterval(pollT);pollT=null;lastNew=-1;badge(0);re
   if(lastNew>=0&&n>lastNew){beep();try{if(window.Notification&&Notification.permission==='granted')new Notification('سفارش جدید در برق‌یار')}catch(e){}if(mode==='admin'&&tab==='orders')ordersView()}
   lastNew=n}).catch(function(){})}
 function startPoll(){try{if(window.Notification&&Notification.permission==='default')Notification.requestPermission()}catch(e){}if(pollT)return;chk();pollT=setInterval(chk,30000)}
-load();startProductPoll();
+load();startProductRealtime();
 
 /* ---- نصب PWA ---- */
 var dip=null;
@@ -208,6 +239,17 @@ if(!isStd()&&$('inst'))$('inst').style.display='';
 var TR=null,PHONE='۰۹۳۶۶۴۲۸۸۱۶',CRT='تمام حقوق معنوی و مادی برنامه برقیار متعلق به سازنده برنامه بنام محمدرضا دانشیار می‌باشد.';
 function errMsg(e){try{var m=JSON.parse(e.message);return m.message||m.error_description||''}catch(x){var t=e&&e.message?String(e.message):'';return t.length<160&&t.indexOf('<')<0?t:''}}
 function toEn(s){return String(s).replace(/[۰-۹]/g,function(c){return '۰۱۲۳۴۵۶۷۸۹'.indexOf(c)}).replace(/[٠-٩]/g,function(c){return '٠١٢٣٤٥٦٧٨٩'.indexOf(c)})}
+function homeCustConfirm(){
+ var c=val('homeTrackCode').trim().toUpperCase(),p=toEn(val('homePhone4').trim()),m=$('homeConfirmMsg');
+ if(!c){m.className='err';m.textContent='کد پیگیری سفارش را وارد کنید.';return}
+ if(!/^\\d{4}$/.test(p)){m.className='err';m.textContent='چهار رقم آخر شماره تلفن را وارد کنید.';return}
+ m.className='mu';m.textContent='در حال بررسی…';
+ api('rpc/shop_customer_confirm',{method:'POST',body:{p_code:c,p_phone4:p}}).then(function(r){
+  if(r==='ok'||r==='already'){m.className='okc';m.textContent=r==='ok'?'تأیید دریافت شما با موفقیت ثبت شد.':'دریافت این سفارش قبلاً تأیید شده است.'}
+  else if(r==='not_ready'){m.className='err';m.textContent='این سفارش هنوز به مرحله تحویل نرسیده است.'}
+  else{m.className='err';m.textContent='کد پیگیری یا چهار رقم آخر تلفن صحیح نیست.'}
+ }).catch(function(){m.className='err';m.textContent='ارتباط با سامانه برقرار نشد؛ دوباره تلاش کنید.'});
+}
 function custConfirm(){var p=toEn(val('tp4').trim());if(!/^\d{4}$/.test(p)){$('tm').textContent='۴ رقم آخر شماره تلفن را وارد کنید.';return}
  api('rpc/shop_customer_confirm',{method:'POST',body:{p_code:TR,p_phone4:p}}).then(function(r){
   if(r==='ok'||r==='already')doTrack();
