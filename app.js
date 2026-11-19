@@ -146,7 +146,7 @@ function draw(){
 function orderText(){var L=lines();return 'سفارش جدید از برق‌یار\nکد پیگیری: '+code+'\n'+L.a.map(function(i){return '• '+i.name+' × '+i.qty+' ('+i.unit+') = '+en(i.qty*i.price)}).join('\n')+'\nجمع کل: '+en(L.t)+'\nنام: '+val('nm')+'\nتلفن: '+val('ph')+'\nآدرس: '+val('ad')}
 function showOrderReceipt(){
  var phone=toEn(val('ph').trim()).replace(/\D/g,'');
- var last4=phone.slice(-4);
+ var last4=phone.slice(-4);TR=code;
  if($('homeTrackCode'))$('homeTrackCode').value=code;
  if($('homePhone4'))$('homePhone4').value=last4;
  var r=$('orderReceipt');
