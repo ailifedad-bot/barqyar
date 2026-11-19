@@ -117,9 +117,9 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 </header>
 <section class="ar" id="homeConfirm" style="margin:10px 14px 4px">
  <b>پیگیری و تأیید دریافت سفارش</b>
- <p class="mu">راهنمای مشتری: ابتدا کد سفارش را از پیام واتس‌اپ یا ایمیل باز کنید. پیگیری، وضعیت سفارش را نشان می‌دهد. فقط پس از دریافت واقعی کالا، چهار رقم آخر شماره ثبت‌شده را وارد و دریافت را تأیید کنید. پس از تأیید شما، مدیر تحویل نهایی را ثبت می‌کند.</p>
+ <p class="mu">راهنمای مشتری: کد پیگیری را از پیام واتس‌اپ یا ایمیل وارد کنید. برای تأیید دریافت، فقط پس از تحویل واقعی کالا، چهار رقم آخر همان شماره موبایلی را وارد کنید که هنگام ثبت همین سفارش در کادر «شماره تماس» ثبت کرده‌اید؛ این شماره، شماره موبایل خودِ مشتری است، نه شماره فروشگاه یا مدیر. پس از تأیید شما، مدیر برق‌یار تحویل نهایی را بررسی و ثبت می‌کند.</p>
  <input id="homeTrackCode" dir="ltr" placeholder="کد پیگیری سفارش، مانند BY-AB12CD" autocomplete="off">
- <input id="homePhone4" type="tel" inputmode="numeric" maxlength="4" dir="ltr" placeholder="چهار رقم آخر شماره تلفن">
+ <input id="homePhone4" type="tel" inputmode="numeric" maxlength="4" dir="ltr" placeholder="۴ رقم آخر شماره موبایلی که برای همین سفارش ثبت کردید">
  <button class="btn" onclick="homeCustConfirm()">تأیید دریافت کالا</button>
  <p id="homeConfirmMsg" class="mu" aria-live="polite"></p>
 </section>
