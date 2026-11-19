@@ -66,7 +66,7 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 .cfok,.dlok{border:2px solid var(--cf);background:rgba(22,163,74,.12);color:var(--cf);border-radius:12px;padding:12px;margin-top:10px;font-weight:700;text-align:center}
 .dlok{border-color:var(--dl);background:rgba(124,58,237,.12);color:var(--dl)}
 .await{border:2px solid var(--dl);box-shadow:0 0 14px rgba(124,58,237,.35)}
-.tag{display:inline-block;border-radius:10px;padding:2px 8px;font-size:12px;font-weight:700;color:#fff;margin-inline-end:4px}.tag.c{background:var(--cf)}.tag.d{background:var(--dl)}
+.tag{display:inline-block;border-radius:10px;padding:2px 8px;font-size:12px;font-weight:700;color:#fff;margin-inline-end:4px}.tag.c{background:var(--cf)}.tag.d{background:var(--dl)}.tag:not(.c):not(.d){background:var(--bd);color:var(--tx)}
 @media (prefers-reduced-motion:reduce){.cfbtn,.dlbtn,.btn.dl{animation:none}}
 #pa{display:none}
 @page{margin:14mm}
@@ -93,7 +93,7 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 <div class="bar h" id="bar" onclick="openCart()"><span id="bn"></span><b id="bt"></b></div>
 <div class="sheet" id="sh" onclick="if(event.target===this)closeSh()"><div class="in" id="in"></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2"></script>
-<script src="app.js?v=barqyar-live-update-home-confirm-20261119"></script>
+<script src="app.js?v=barqyar-live-update-home-confirm-v2-20261119"></script>
 
 <script>
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
