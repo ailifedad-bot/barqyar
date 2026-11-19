@@ -68,6 +68,42 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 .await{border:2px solid var(--dl);box-shadow:0 0 14px rgba(124,58,237,.35)}
 .tag{display:inline-block;border-radius:10px;padding:2px 8px;font-size:12px;font-weight:700;color:#fff;margin-inline-end:4px}.tag.c{background:var(--cf)}.tag.d{background:var(--dl)}.tag:not(.c):not(.d){background:var(--bd);color:var(--tx)}
 @media (prefers-reduced-motion:reduce){.cfbtn,.dlbtn,.btn.dl{animation:none}}
+
+.rpt-intro{border:1px solid var(--bd);background:var(--card);border-radius:14px;padding:12px;margin-bottom:10px}
+.rpt-intro p,.rpt-group-head p{font-size:12px;color:var(--mu);margin:5px 0 0;line-height:1.8}
+.rpt-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-bottom:12px}
+.rpt-count-card{border:2px solid;border-radius:14px;padding:10px 7px;text-align:center;min-width:0}
+.rpt-count-card b,.rpt-count-card strong,.rpt-count-card small{display:block}
+.rpt-count-card b{font-size:12px;line-height:1.6}
+.rpt-count-card strong{font-size:26px;line-height:1.4}
+.rpt-count-card small{font-size:10px;line-height:1.6}
+.rpt-green{--rpt:#15803d;--rpt-bg:rgba(22,163,74,.08)}
+.rpt-amber{--rpt:#b45309;--rpt-bg:rgba(245,158,11,.10)}
+.rpt-purple{--rpt:#7c3aed;--rpt-bg:rgba(124,58,237,.09)}
+.rpt-blue{--rpt:#0369a1;--rpt-bg:rgba(14,165,233,.08)}
+.rpt-red{--rpt:#b91c1c;--rpt-bg:rgba(220,38,38,.08)}
+.rpt-count-card{border-color:var(--rpt);background:var(--rpt-bg);color:var(--rpt)}
+.rpt-group{border:2px solid var(--rpt);background:var(--rpt-bg);border-radius:16px;padding:10px;margin:12px 0}
+.rpt-group-head{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--rpt);margin-bottom:8px}
+.rpt-group-head b{font-size:15px}
+.rpt-group-head strong{font-size:23px;min-width:36px;text-align:center}
+.rpt-order{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:10px;margin-top:8px}
+.rpt-order-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.rpt-meta{font-size:12px;color:var(--mu);margin-top:5px;overflow-wrap:anywhere}
+.rpt-item{font-size:12px;margin-top:5px}
+.rpt-total{font-weight:800;margin-top:8px}
+.rpt-history{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.rpt-action{border-inline-start:4px solid var(--rpt);background:var(--rpt-bg);padding:9px;border-radius:9px;font-size:12px;line-height:1.9;margin-top:10px}
+.rpt-label{display:block;font-size:12px;margin:10px 0 5px;color:var(--mu)}
+.rpt-code{direction:ltr;text-align:left;border:2px solid var(--rpt)!important;margin-bottom:5px!important;font-weight:800}
+.rpt-btn{width:100%;border:0;border-radius:10px;padding:11px;font:inherit;font-weight:800;color:#fff;margin-top:5px}
+.rpt-btn-green{background:#15803d}
+.rpt-btn-purple{background:#7c3aed}
+.rpt-warning{background:rgba(245,158,11,.12);border:1px solid #b45309;color:#92400e;border-radius:9px;padding:8px;font-size:11px;line-height:1.8;margin-top:8px}
+.rpt-empty{font-size:12px;color:var(--mu);background:var(--card);border-radius:10px;padding:10px}
+.rpt-fin-title{margin:18px 0 8px}
+@media(max-width:390px){.rpt-summary{gap:4px}.rpt-count-card{padding:8px 4px}.rpt-count-card b{font-size:11px}.rpt-count-card strong{font-size:22px}.rpt-count-card small{font-size:9px}}
+
 #pa{display:none}
 @page{margin:14mm}
 @media print{body.pr>*:not(#pa){display:none!important}body.pr{background:#fff;padding:0}body.pr #pa{display:block;color:#000;background:#fff;font-size:13px;line-height:1.8}#pa table{width:100%;border-collapse:collapse}#pa th,#pa td{border:1px solid #777;padding:5px 7px;text-align:right}#pa th{background:#eee}}
@@ -93,7 +129,7 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 <div class="bar h" id="bar" onclick="openCart()"><span id="bn"></span><b id="bt"></b></div>
 <div class="sheet" id="sh" onclick="if(event.target===this)closeSh()"><div class="in" id="in"></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2"></script>
-<script src="app.js?v=barqyar-manager-confirm-code-v1-20261119"></script>
+<script src="app.js?v=barqyar-order-status-reports-v1-20261119"></script>
 
 <script>
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
