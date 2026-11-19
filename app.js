@@ -242,7 +242,7 @@ function toEn(s){return String(s).replace(/[۰-۹]/g,function(c){return '۰۱۲�
 function homeCustConfirm(){
  var c=val('homeTrackCode').trim().toUpperCase(),p=toEn(val('homePhone4').trim()),m=$('homeConfirmMsg');
  if(!c){m.className='err';m.textContent='کد پیگیری سفارش را وارد کنید.';return}
- if(!/^\\d{4}$/.test(p)){m.className='err';m.textContent='چهار رقم آخر شماره تلفن را وارد کنید.';return}
+ if(!/^\d{4}$/.test(p)){m.className='err';m.textContent='چهار رقم آخر شماره تلفن را وارد کنید.';return}
  m.className='mu';m.textContent='در حال بررسی…';
  api('rpc/shop_customer_confirm',{method:'POST',body:{p_code:c,p_phone4:p}}).then(function(r){
   if(r==='ok'||r==='already'){m.className='okc';m.textContent=r==='ok'?'تأیید دریافت شما با موفقیت ثبت شد.':'دریافت این سفارش قبلاً تأیید شده است.'}
