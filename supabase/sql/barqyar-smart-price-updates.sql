@@ -97,6 +97,9 @@ begin
  on conflict(id) do update set token_hash=excluded.token_hash;
  perform vault.create_secret(v_token,'barqyar_price_cron_token','Private token for Barqyar price cron',null);
 end; $$;
+-- Store the app's public publishable key in Vault before scheduling:
+-- select vault.create_secret('YOUR_SUPABASE_PUBLISHABLE_KEY','barqyar_price_cron_apikey','Public key for cron requests',null);
+
 -- Daily scheduler; the Edge Function only performs web research when 14 days have elapsed.
 select cron.unschedule(jobid) from cron.job where jobname='barqyar-price-update-daily';
 select cron.schedule(
@@ -106,6 +109,7 @@ select cron.schedule(
  select net.http_post(
   url := 'https://zgswoheckqasqoclhodg.supabase.co/functions/v1/barqyar-price-update',
   headers := jsonb_build_object('Content-Type','application/json',
+   'apikey',(select decrypted_secret from vault.decrypted_secrets where name='barqyar_price_cron_apikey'),
    'x-barqyar-cron-token',(select decrypted_secret from vault.decrypted_secrets where name='barqyar_price_cron_token')),
   body := jsonb_build_object('trigger','cron'),
   timeout_milliseconds := 20000
