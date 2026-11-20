@@ -176,9 +176,93 @@ function reportView(){api('shop_orders?select=*&report_archived_at=is.null&order
  var h='<div class="rpt-intro"><b>گزارش و بایگانی سفارش‌ها</b><p>گزارش کامل فقط در پنل مدیر نمایش داده می‌شود. تأیید سفارش بر عهده مدیر است و تأیید مشتری در فرایند وجود ندارد. هر سفارش با کد یکتا و شماره تماس مشتری ثبت می‌شود.</p></div><div class="rpt-summary"><div class="rpt-count-card rpt-amber"><b>در انتظار تأیید مدیر</b><strong>'+f(pending.length)+'</strong><small>اقدام لازم: بررسی و تأیید مدیر</small></div><div class="rpt-count-card rpt-green"><b>تأییدشده توسط مدیر</b><strong>'+f(approved.length)+'</strong><small>آماده بایگانی</small></div><div class="rpt-count-card rpt-red"><b>لغوشده</b><strong>'+f(cancelled.length)+'</strong></div></div>';
  h+=group('سفارش‌های در انتظار تأیید مدیر','rpt-amber',pending)+group('سفارش‌های تأییدشده توسط مدیر','rpt-green',approved)+group('سفارش‌های تکمیل‌شده قدیمی','rpt-blue',done);if(cancelled.length)h+=group('سفارش‌های لغوشده','rpt-red',cancelled);$('ab').innerHTML=h
  }).catch(fail)}
-function customersView(){$('ab').innerHTML='<div class="rpt-intro"><b>بانک اطلاعات مشتریان</b><p>هر شماره تماس یک پرونده و یک کد اشتراک یکتا دارد. ثبت سفارش، پرونده مشتری را خودکار ایجاد یا به‌روزرسانی می‌کند.</p></div><input id="customerSearch" placeholder="جستجو با نام، شماره تماس یا کد اشتراک" oninput="filterCustomers()"><div id="customerList">در حال دریافت…</div>';api('shop_customers?select=id,subscription_code,full_name,phone,last_address,created_at&order=created_at.desc&limit=1000').then(function(d){CUSTOMERS=d||[];filterCustomers()}).catch(function(e){$('customerList').innerHTML='<p class="err">دریافت مشتریان ناموفق بود: '+esc(errMsg(e)||'دسترسی مدیر را بررسی کنید')+'</p>'})}
-var CUSTOMERS=[];
-function filterCustomers(){var q=val('customerSearch').trim().toLowerCase(),a=CUSTOMERS.filter(function(c){return [c.full_name,c.phone,c.subscription_code,c.last_address].join(' ').toLowerCase().includes(q)});$('customerList').innerHTML=a.length?a.map(function(c){return '<div class="ar"><b>'+esc(c.full_name)+'</b><div dir="ltr">'+esc(c.phone)+'</div>'+(c.last_address?'<div class="mu">نشانی: '+esc(c.last_address)+'</div>':'')+'<div>کد اشتراک: <b dir="ltr">'+esc(c.subscription_code)+'</b></div><small class="mu">'+dt(c.created_at)+'</small></div>'}).join(''):'<p class="mu">مشتری‌ای پیدا نشد.</p>'}
+var CUSTOMERS=[],CUSTOMER_ORDERS=[],CUSTOMER_STATS={},CUSTOMER_GROUP_SETTINGS={active_days:90,loyal_min_orders:3,bulk_min_total_toman:null};
+var CUSTOMER_GROUPS=['مشتری فعال','مشتری جزئی','مشتری دائمی','مشتری عمده','شرکت ها','پروژه ها','بازاریاب','سایر'];
+function customerPhoneKey(v){return toEn(String(v||'')).replace(/[^0-9]/g,'')}
+function customerBuildStats(){
+ CUSTOMER_STATS={};
+ var byId={},byPhone={};
+ CUSTOMER_ORDERS.forEach(function(o){
+  if(o.status==='cancelled')return;
+  var item={count:1,total:Number(o.total||0),date:o.created_at?new Date(o.created_at):null};
+  if(o.customer_id){if(!byId[o.customer_id])byId[o.customer_id]={count:0,total:0,last:null};byId[o.customer_id].count+=1;byId[o.customer_id].total+=item.total;if(item.date&&(!byId[o.customer_id].last||item.date>byId[o.customer_id].last))byId[o.customer_id].last=item.date}
+  var pk=customerPhoneKey(o.phone);
+  if(pk){if(!byPhone[pk])byPhone[pk]={count:0,total:0,last:null};byPhone[pk].count+=1;byPhone[pk].total+=item.total;if(item.date&&(!byPhone[pk].last||item.date>byPhone[pk].last))byPhone[pk].last=item.date}
+ });
+ CUSTOMERS.forEach(function(c){
+  var a=byId[c.id],b=byPhone[customerPhoneKey(c.phone)],s={count:0,total:0,last:null};
+  if(a){s.count=a.count;s.total=a.total;s.last=a.last}
+  else if(b){s.count=b.count;s.total=b.total;s.last=b.last}
+  CUSTOMER_STATS[c.id]=s;
+ });
+}
+function customerAutoGroup(c){
+ var s=CUSTOMER_STATS[c.id]||{count:0,total:0,last:null},days=CUSTOMER_GROUP_SETTINGS.active_days||90;
+ if(CUSTOMER_GROUP_SETTINGS.bulk_min_total_toman&&s.total>=Number(CUSTOMER_GROUP_SETTINGS.bulk_min_total_toman))return 'مشتری عمده';
+ if(s.count>=Number(CUSTOMER_GROUP_SETTINGS.loyal_min_orders||3))return 'مشتری دائمی';
+ if(s.last&&((Date.now()-s.last.getTime())/86400000)<=days)return 'مشتری فعال';
+ if(s.count>0)return 'مشتری جزئی';
+ return 'سایر';
+}
+function customerCurrentGroup(c){return c.customer_group_manual?(c.customer_group||'سایر'):customerAutoGroup(c)}
+function customerGroupClass(g){return {'مشتری فعال':'cg-active','مشتری جزئی':'cg-small','مشتری دائمی':'cg-loyal','مشتری عمده':'cg-bulk','شرکت ها':'cg-company','پروژه ها':'cg-project','بازاریاب':'cg-marketer','سایر':'cg-other'}[g]||'cg-other'}
+function customersView(){
+ $('ab').innerHTML='<div class="rpt-intro"><b>بانک اطلاعات مشتریان</b><p>پرونده مشتریان به‌صورت خودکار از فرم سفارش ایجاد می‌شود. آمار از سفارش‌های ثبت‌شده محاسبه می‌شود و مدیر می‌تواند گروه و مشخصات هر مشتری را ویرایش کند.</p></div>'+
+ '<div class="customer-settings"><b>تنظیم معیارهای دسته‌بندی خودکار</b><div class="g"><label>فعال بودن در چند روز اخیر<input id="cgActiveDays" type="number" min="1" max="3650" value="90"></label><label>حداقل سفارش برای مشتری دائمی<input id="cgLoyalOrders" type="number" min="2" max="10000" value="3"></label><label style="grid-column:1/-1">حداقل مجموع خرید برای مشتری عمده (تومان)<input id="cgBulkTotal" type="number" min="1" placeholder="برای غیرفعال ماندن خالی بگذارید"></label></div><button class="btn" onclick="customerSettingsSave()">ذخیره معیارها</button><p class="mu">مشتری فعال: سفارش در بازه تعیین‌شده · دائمی: حداقل تعداد سفارش · عمده: مجموع مبلغ سفارش‌ها به حد تعیین‌شده. گروه شرکت‌ها، پروژه‌ها و بازاریاب با انتخاب مدیر تعیین می‌شوند.</p></div>'+
+ '<input id="customerSearch" placeholder="جستجو با نام، شماره تماس، کد اشتراک یا گروه" oninput="filterCustomers()"><div id="customerList">در حال دریافت…</div>';
+ Promise.all([
+  api('shop_customers?select=id,subscription_code,full_name,phone,phone_normalized,last_address,created_at,customer_group,customer_group_manual&order=created_at.desc&limit=2000'),
+  api('shop_orders?select=id,customer_id,phone,total,status,created_at&limit=5000'),
+  api('shop_customer_group_settings?select=*&id=eq.1')
+ ]).then(function(r){
+  CUSTOMERS=r[0]||[];CUSTOMER_ORDERS=r[1]||[];
+  if(r[2]&&r[2][0])CUSTOMER_GROUP_SETTINGS=r[2][0];
+  $('cgActiveDays').value=CUSTOMER_GROUP_SETTINGS.active_days||90;
+  $('cgLoyalOrders').value=CUSTOMER_GROUP_SETTINGS.loyal_min_orders||3;
+  $('cgBulkTotal').value=CUSTOMER_GROUP_SETTINGS.bulk_min_total_toman||'';
+  customerBuildStats();filterCustomers();
+ }).catch(function(e){$('customerList').innerHTML='<p class="err">دریافت بانک مشتریان یا آمار سفارش‌ها ناموفق بود: '+esc(errMsg(e)||'دسترسی مدیر و اتصال را بررسی کنید')+'</p>'});
+}
+function customerSettingsSave(){
+ var days=Number(val('cgActiveDays')),loyal=Number(val('cgLoyalOrders')),bulkRaw=val('cgBulkTotal').trim(),bulk=bulkRaw===''?null:Number(bulkRaw);
+ if(!Number.isInteger(days)||days<1||days>3650||!Number.isInteger(loyal)||loyal<2||loyal>10000||(bulk!==null&&(!Number.isFinite(bulk)||bulk<=0))){alert('معیارها را به‌درستی وارد کنید.');return}
+ api('shop_customer_group_settings?id=eq.1',{method:'PATCH',prefer:'return=representation',body:{active_days:days,loyal_min_orders:loyal,bulk_min_total_toman:bulk,updated_at:new Date().toISOString()}})
+ .then(function(d){if(!d||!d.length)throw new Error('تنظیمات ذخیره نشد');CUSTOMER_GROUP_SETTINGS=d[0];filterCustomers();alert('معیارهای دسته‌بندی ذخیره شد.')})
+ .catch(function(e){alert('ذخیره معیارها انجام نشد: '+(errMsg(e)||'دسترسی مدیر را بررسی کنید'))});
+}
+function customerSaveGroup(id){
+ var group=val('customerGroup_'+id);
+ if(CUSTOMER_GROUPS.indexOf(group)<0)return alert('گروه انتخاب‌شده معتبر نیست.');
+ api('shop_customers?id=eq.'+encodeURIComponent(id),{method:'PATCH',prefer:'return=representation',body:{customer_group:group,customer_group_manual:true}})
+ .then(function(d){if(!d||!d.length)throw new Error('تغییری ذخیره نشد');var c=CUSTOMERS.filter(function(x){return x.id===id})[0];if(c){c.customer_group=group;c.customer_group_manual=true}filterCustomers();alert('گروه مشتری ذخیره شد.')})
+ .catch(function(e){alert('ذخیره گروه انجام نشد: '+(errMsg(e)||'دسترسی مدیر را بررسی کنید'))});
+}
+function customerAutoReset(id){
+ if(!confirm('گروه این مشتری بر اساس تعداد و مبلغ سفارش‌ها به‌صورت خودکار تعیین شود؟'))return;
+ api('shop_customers?id=eq.'+encodeURIComponent(id),{method:'PATCH',prefer:'return=representation',body:{customer_group:'سایر',customer_group_manual:false}})
+ .then(function(d){if(!d||!d.length)throw new Error('تغییری ذخیره نشد');var c=CUSTOMERS.filter(function(x){return x.id===id})[0];if(c){c.customer_group='سایر';c.customer_group_manual=false}filterCustomers();alert('دسته‌بندی خودکار فعال شد.')})
+ .catch(function(e){alert('تغییر گروه انجام نشد: '+(errMsg(e)||'دسترسی مدیر را بررسی کنید'))});
+}
+function customerSaveDetails(id){
+ var c=CUSTOMERS.filter(function(x){return x.id===id})[0];if(!c)return;
+ var name=val('customerName_'+id).trim(),phone=toEn(val('customerPhone_'+id).trim()),address=val('customerAddress_'+id).trim(),normalized=customerPhoneKey(phone);
+ if(!name||name.length>120||normalized.length<10||normalized.length>15||address.length>500){alert('نام، شماره موبایل یا نشانی معتبر نیست.');return}
+ api('shop_customers?id=eq.'+encodeURIComponent(id),{method:'PATCH',prefer:'return=representation',body:{full_name:name,phone:phone,phone_normalized:normalized,last_address:address}})
+ .then(function(d){if(!d||!d.length)throw new Error('تغییری ذخیره نشد');Object.assign(c,d[0]);customerBuildStats();filterCustomers();alert('مشخصات مشتری ویرایش شد.')})
+ .catch(function(e){alert('ویرایش مشخصات انجام نشد: '+(errMsg(e)||'شماره موبایل تکراری یا خطای دسترسی'))});
+}
+function filterCustomers(){
+ var q=val('customerSearch').trim().toLowerCase();
+ var a=CUSTOMERS.filter(function(c){return [c.full_name,c.phone,c.subscription_code,c.last_address,customerCurrentGroup(c)].join(' ').toLowerCase().includes(q)});
+ $('customerList').innerHTML=a.length?a.map(function(c){
+  var s=CUSTOMER_STATS[c.id]||{count:0,total:0,last:null},g=customerCurrentGroup(c),opts=CUSTOMER_GROUPS.map(function(x){return '<option value="'+esc(x)+'"'+(x===g?' selected':'')+'>'+esc(x)+'</option>'}).join('');
+  return '<article class="ar customer-card"><div class="customer-head"><b>'+esc(c.full_name||'بدون نام')+'</b><span class="customer-badge '+customerGroupClass(g)+'">'+esc(g)+'</span></div>'+
+   '<div class="customer-stats"><div><small>تعداد سفارش</small><b>'+f(s.count)+'</b></div><div><small>مجموع خرید</small><b>'+pr(s.total)+'</b></div><div><small>آخرین سفارش</small><b>'+dt(s.last?s.last.toISOString():null)+'</b></div></div>'+
+   '<div class="mu">موبایل: <b dir="ltr">'+esc(c.phone||'')+'</b> · کد اشتراک: <b dir="ltr">'+esc(c.subscription_code||'—')+'</b></div>'+
+   '<label class="mu">انتخاب گروه مشتری</label><select id="customerGroup_'+esc(c.id)+'">'+opts+'</select><div class="acts"><button onclick="customerSaveGroup(\''+esc(c.id)+'\')">ثبت گروه انتخاب‌شده</button><button onclick="customerAutoReset(\''+esc(c.id)+'\')">بازگشت به دسته‌بندی خودکار</button></div>'+
+   '<details class="customer-edit"><summary>ویرایش مشخصات مشتری</summary><label>نام مشتری</label><input id="customerName_'+esc(c.id)+'" value="'+esc(c.full_name||'')+'"><label>شماره موبایل</label><input id="customerPhone_'+esc(c.id)+'" type="tel" dir="ltr" value="'+esc(c.phone||'')+'"><label>نشانی</label><textarea id="customerAddress_'+esc(c.id)+'" rows="2">'+esc(c.last_address||'')+'</textarea><button class="btn" onclick="customerSaveDetails(\''+esc(c.id)+'\')">ذخیره مشخصات</button></details></article>';
+ }).join(''):'<p class="mu">مشتری‌ای پیدا نشد.</p>';
+}
 function rptEditOpen(i){
  if(!token||!managerAccess)return;
  var e=$('rptedit_'+i);if(e){e.style.display='block';e.scrollIntoView({behavior:'smooth',block:'nearest'})}
