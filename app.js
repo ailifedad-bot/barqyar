@@ -51,9 +51,14 @@ function initActivation(){
   return false;
  }).then(function(isAdmin){
   if(isAdmin)return;
+  // اگر این مرورگر قبلاً برای مدیر اصلی استفاده شده، صفحه ورود مدیر را نشان بده؛ نه فرم کد کاربران.
+  if(localStorage.getItem('barqyar_admin_owner_hint')==='1'){openAdmin();return}
   return api('rpc/shop_check_activation',{method:'POST',body:{p_device_id:activationIdentity.id,p_device_secret:activationIdentity.secret}})
    .then(function(ok){if(ok===true){activationUnlocked=true;load();startProductRealtime()}else showActivationGate()})
- }).catch(function(){showActivationGate('بررسی فعال‌سازی انجام نشد. اتصال اینترنت را بررسی کنید و دوباره تلاش کنید.')});
+ }).catch(function(){
+  if(localStorage.getItem('barqyar_admin_owner_hint')==='1')openAdmin();
+  else showActivationGate('بررسی فعال‌سازی انجام نشد. اتصال اینترنت را بررسی کنید و دوباره تلاش کنید.');
+ });
 }
 function load(){refreshProducts()}
 function refreshProducts(){if(managerAccess)return;api('shop_products?select=*&order=id').then(function(d){P=d||[];draw();if(mode==='cart')cartView()}).catch(function(){if(!$('grid').innerHTML||$('grid').innerHTML.indexOf('در حال بارگذاری')>-1)$('grid').innerHTML='<p class="err" style="grid-column:1/-1;text-align:center">بارگذاری کالاها ناموفق بود. صفحه را دوباره باز کنید.</p>'})}
@@ -112,14 +117,14 @@ function openContact(){show('contact');
 }
 /* ---------- مدیر ---------- */
 function openAdmin(){show('admin');token&&managerAccess?adminView():loginView()}
-function loginView(m){$('in').innerHTML='<h3 style="margin:0 0 8px">ورود مدیر</h3><input id="em" type="email" placeholder="ایمیل" dir="ltr"><input id="pw" type="password" placeholder="رمز عبور" dir="ltr"><button class="btn" onclick="login()">ورود</button><p class="err">'+(m||'')+'</p>'}
+function loginView(m){$('in').innerHTML='<h3 style="margin:0 0 8px">ورود مدیر اصلی برق‌یار</h3><p class="mu">حساب سازنده و مدیر اصلی برنامه</p><input id="em" type="email" value="'+MAIL+'" placeholder="ایمیل مدیر" dir="ltr"><input id="pw" type="password" placeholder="رمز عبور" dir="ltr"><button class="btn" onclick="login()">ورود مدیر</button><p class="err">'+(m||'')+'</p>'}
 function login(){
  adminAuthClient.auth.signInWithPassword({email:val('em').trim(),password:val('pw')})
  .then(function(result){
   if(result.error||!result.data||!result.data.session)return loginView('ایمیل یا رمز عبور اشتباه است.');
   token=result.data.session.access_token;
   return api('rpc/shop_is_admin').then(function(ok){
-   if(ok===true){managerAccess=true;hideActivationGate();adminView()}
+   if(ok===true){managerAccess=true;try{localStorage.setItem('barqyar_admin_owner_hint','1')}catch(e){}hideActivationGate();adminView()}
    else{token=null;managerAccess=false;return adminAuthClient.auth.signOut().then(function(){loginView('این حساب در فهرست مدیران مجاز برق‌یار نیست.')})}
   });
  }).catch(function(){token=null;managerAccess=false;loginView('تأیید ورود مدیر انجام نشد. اتصال را بررسی و دوباره تلاش کنید.')});
@@ -127,6 +132,8 @@ function login(){
 function logout(){
  adminAuthClient.auth.signOut().finally(function(){
   token=null;managerAccess=false;closeSh();
+  // مدیر اصلی پس از خروج، مستقیماً فرم ورود مدیر را می‌بیند؛ کاربران عادی همچنان کد فعال‌سازی لازم دارند.
+  if(localStorage.getItem('barqyar_admin_owner_hint')==='1'){openAdmin();return}
   api('rpc/shop_check_activation',{method:'POST',body:{p_device_id:activationIdentity.id,p_device_secret:activationIdentity.secret}})
    .then(function(ok){activationUnlocked=ok===true;if(activationUnlocked){load();startProductRealtime()}else showActivationGate()})
    .catch(function(){activationUnlocked=false;showActivationGate('برای ادامه استفاده، وضعیت فعال‌سازی دستگاه بررسی نشد. اتصال اینترنت را بررسی کنید.')});
