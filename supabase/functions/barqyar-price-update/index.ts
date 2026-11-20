@@ -34,12 +34,14 @@ const publishableKeys = (() => {
     return {};
   }
 })();
+const serviceKeyName = secretKeys.default;
+const publishableKeyName = publishableKeys.default;
 const serviceKey =
-  secretKeys.default ??
+  (typeof serviceKeyName === "string" ? Deno.env.get(serviceKeyName) : null) ??
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
   "";
 const publishableKey =
-  publishableKeys.default ??
+  (typeof publishableKeyName === "string" ? Deno.env.get(publishableKeyName) : null) ??
   Deno.env.get("SUPABASE_ANON_KEY") ??
   "";
 
