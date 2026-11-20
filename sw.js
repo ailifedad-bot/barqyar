@@ -1,4 +1,4 @@
-var CACHE='barqyar-v26-direct-order-pdf';
+var CACHE='barqyar-v27-customer-bank-single-admin';
 var SHELL=['./','index.html','manifest.json','app.js','price-admin.js','privacy.html','icon-192.png','icon-512.png'];
 self.addEventListener('install',function(e){
   e.waitUntil(caches.open(CACHE).then(function(c){return c.addAll(SHELL)}).then(function(){return self.skipWaiting()}));
