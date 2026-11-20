@@ -185,7 +185,7 @@ function customerBuildStats(){
   var s={count:0,total:0,last:null},phone=customerPhoneKey(c.phone);
   CUSTOMER_ORDERS.forEach(function(o){
    if(o.status==='cancelled')return;
-   var match=(o.customer_id&&o.customer_id===c.id)||(phone&&customerPhoneKey(o.phone)===phone);
+   var match=o.customer_id?o.customer_id===c.id:(phone&&customerPhoneKey(o.phone)===phone);
    if(!match)return;
    s.count+=1;s.total+=Number(o.total||0);
    var date=o.created_at?new Date(o.created_at):null;
