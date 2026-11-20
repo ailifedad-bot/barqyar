@@ -181,18 +181,16 @@ var CUSTOMER_GROUPS=['مشتری فعال','مشتری جزئی','مشتری د�
 function customerPhoneKey(v){return toEn(String(v||'')).replace(/[^0-9]/g,'')}
 function customerBuildStats(){
  CUSTOMER_STATS={};
- var byId={},byPhone={};
- CUSTOMER_ORDERS.forEach(function(o){
-  if(o.status==='cancelled')return;
-  var item={count:1,total:Number(o.total||0),date:o.created_at?new Date(o.created_at):null};
-  if(o.customer_id){if(!byId[o.customer_id])byId[o.customer_id]={count:0,total:0,last:null};byId[o.customer_id].count+=1;byId[o.customer_id].total+=item.total;if(item.date&&(!byId[o.customer_id].last||item.date>byId[o.customer_id].last))byId[o.customer_id].last=item.date}
-  var pk=customerPhoneKey(o.phone);
-  if(pk){if(!byPhone[pk])byPhone[pk]={count:0,total:0,last:null};byPhone[pk].count+=1;byPhone[pk].total+=item.total;if(item.date&&(!byPhone[pk].last||item.date>byPhone[pk].last))byPhone[pk].last=item.date}
- });
  CUSTOMERS.forEach(function(c){
-  var a=byId[c.id],b=byPhone[customerPhoneKey(c.phone)],s={count:0,total:0,last:null};
-  if(a){s.count=a.count;s.total=a.total;s.last=a.last}
-  else if(b){s.count=b.count;s.total=b.total;s.last=b.last}
+  var s={count:0,total:0,last:null},phone=customerPhoneKey(c.phone);
+  CUSTOMER_ORDERS.forEach(function(o){
+   if(o.status==='cancelled')return;
+   var match=(o.customer_id&&o.customer_id===c.id)||(phone&&customerPhoneKey(o.phone)===phone);
+   if(!match)return;
+   s.count+=1;s.total+=Number(o.total||0);
+   var date=o.created_at?new Date(o.created_at):null;
+   if(date&&!isNaN(date.getTime())&&(!s.last||date>s.last))s.last=date;
+  });
   CUSTOMER_STATS[c.id]=s;
  });
 }
