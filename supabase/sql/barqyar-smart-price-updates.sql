@@ -45,15 +45,20 @@ grant select on public.shop_price_update_runs to authenticated;
 grant select on public.shop_price_candidates to authenticated;
 grant all on public.shop_price_update_runs to service_role;
 grant all on public.shop_price_candidates to service_role;
-create policy shop_price_runs_admin_read on public.shop_price_update_runs for select to authenticated using(public.shop_is_admin());
-create policy shop_price_candidates_admin_read on public.shop_price_candidates for select to authenticated using(public.shop_is_admin());
+drop policy if exists shop_price_runs_admin_read on public.shop_price_update_runs;
+create policy shop_price_runs_admin_read on public.shop_price_update_runs for select to authenticated using((select auth.uid()) is not null and public.shop_is_admin());
+drop policy if exists shop_price_candidates_admin_read on public.shop_price_candidates;
+create policy shop_price_candidates_admin_read on public.shop_price_candidates for select to authenticated using((select auth.uid()) is not null and public.shop_is_admin());
+drop policy if exists shop_price_candidates_admin_update on public.shop_price_candidates;
+create policy shop_price_candidates_admin_update on public.shop_price_candidates for update to authenticated using((select auth.uid()) is not null and public.shop_is_admin()) with check((select auth.uid()) is not null and public.shop_is_admin());
+grant update(status,approved_price,reviewed_by,reviewed_at,updated_at) on public.shop_price_candidates to authenticated;
 
 create or replace function public.shop_admin_review_price_candidate(p_candidate_id uuid,p_action text,p_final_price numeric default null)
-returns jsonb language plpgsql security definer set search_path=''
+returns jsonb language plpgsql security invoker set search_path=''
 as $$
 declare v_candidate public.shop_price_candidates%rowtype; v_email text; v_updated_id bigint;
 begin
- if not public.shop_is_admin() then raise exception 'admin access required' using errcode='42501'; end if;
+ if auth.uid() is null or not public.shop_is_admin() then raise exception 'admin access required' using errcode='42501'; end if;
  if p_action not in ('approve','reject') then raise exception 'invalid review action'; end if;
  select * into v_candidate from public.shop_price_candidates where id=p_candidate_id for update;
  if not found then raise exception 'price candidate not found'; end if;
@@ -92,4 +97,18 @@ begin
  on conflict(id) do update set token_hash=excluded.token_hash;
  perform vault.create_secret(v_token,'barqyar_price_cron_token','Private token for Barqyar price cron',null);
 end; $$;
--- Cron schedule is installed after the Edge Function is deployed.
+-- Daily scheduler; the Edge Function only performs web research when 14 days have elapsed.
+select cron.unschedule(jobid) from cron.job where jobname='barqyar-price-update-daily';
+select cron.schedule(
+ 'barqyar-price-update-daily',
+ '15 3 * * *',
+ $job$
+ select net.http_post(
+  url := 'https://zgswoheckqasqoclhodg.supabase.co/functions/v1/barqyar-price-update',
+  headers := jsonb_build_object('Content-Type','application/json',
+   'x-barqyar-cron-token',(select decrypted_secret from vault.decrypted_secrets where name='barqyar_price_cron_token')),
+  body := jsonb_build_object('trigger','cron'),
+  timeout_milliseconds := 20000
+ );
+ $job$
+);
