@@ -1,5 +1,5 @@
-var CACHE='barqyar-v31-manager-approval-fix';
-var SHELL=['./','index.html','manifest.json','app.js','price-admin.js','privacy.html','icon-192.png','icon-512.png'];
+var CACHE='barqyar-v32-customer-delete-fix';
+var SHELL=['./','index.html','manifest.json','app.js','privacy.html','icon-192.png','icon-512.png'];
 self.addEventListener('install',function(e){
   e.waitUntil(caches.open(CACHE).then(function(c){return c.addAll(SHELL)}).then(function(){return self.skipWaiting()}));
 });
