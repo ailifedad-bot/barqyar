@@ -2,6 +2,9 @@ var SB='https://zgswoheckqasqoclhodg.supabase.co',KEY='sb_publishable_Gs5TQ0bdmh
 var WA='989366428816',TG='makekzir',MAIL='makealmatykz@gmail.com',APP_URL='https://ailifedad-bot.github.io/barqyar/';
 function returnAppUrl(c){return APP_URL+(c?'?track='+encodeURIComponent(c):'')+'#home'}
 var P=[],cat='همه',cart={},saved=false,mode='',token=null,managerAccess=false,tab='orders',O=[];
+// Supabase Auth session is stored and refreshed by the official client, so an authorized manager stays signed in after reload.
+var adminAuthClient=window.supabase.createClient(SB,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+adminAuthClient.auth.onAuthStateChange(function(event,session){token=session&&session.access_token?session.access_token:null;if(event==='SIGNED_OUT'){managerAccess=false}});
 function $(i){return document.getElementById(i)}
 function f(n){return Number(n||0).toLocaleString('fa-IR')}
 function pr(n){return f(n)+' تومان'}
@@ -34,9 +37,23 @@ function submitActivation(){
 function initActivation(){
  activationIdentity=getActivationIdentity();
  if(!activationIdentity){showActivationGate('امکان ایجاد شناسه دستگاه وجود ندارد.');return}
- api('rpc/shop_check_activation',{method:'POST',body:{p_device_id:activationIdentity.id,p_device_secret:activationIdentity.secret}})
- .then(function(ok){if(ok===true){activationUnlocked=true;load();startProductRealtime()}else showActivationGate()})
- .catch(function(){showActivationGate('بررسی فعال‌سازی انجام نشد. اتصال اینترنت را بررسی کنید و دوباره تلاش کنید.')})
+ // ابتدا نشست ذخیره‌شده مدیر را بازیابی و مجوز واقعی مدیر را از Supabase بررسی کن.
+ adminAuthClient.auth.getSession().then(function(result){
+  var session=result&&result.data&&result.data.session;
+  if(session&&session.access_token){
+   token=session.access_token;
+   return api('rpc/shop_is_admin',{method:'POST'}).then(function(isAdmin){
+    if(isAdmin===true){managerAccess=true;activationUnlocked=true;load();startProductRealtime();return true}
+    managerAccess=false;token=null;
+    return adminAuthClient.auth.signOut().then(function(){return false});
+   }).catch(function(){managerAccess=false;token=null;return false});
+  }
+  return false;
+ }).then(function(isAdmin){
+  if(isAdmin)return;
+  return api('rpc/shop_check_activation',{method:'POST',body:{p_device_id:activationIdentity.id,p_device_secret:activationIdentity.secret}})
+   .then(function(ok){if(ok===true){activationUnlocked=true;load();startProductRealtime()}else showActivationGate()})
+ }).catch(function(){showActivationGate('بررسی فعال‌سازی انجام نشد. اتصال اینترنت را بررسی کنید و دوباره تلاش کنید.')});
 }
 function load(){refreshProducts()}
 function refreshProducts(){if(managerAccess)return;api('shop_products?select=*&order=id').then(function(d){P=d||[];draw();if(mode==='cart')cartView()}).catch(function(){if(!$('grid').innerHTML||$('grid').innerHTML.indexOf('در حال بارگذاری')>-1)$('grid').innerHTML='<p class="err" style="grid-column:1/-1;text-align:center">بارگذاری کالاها ناموفق بود. صفحه را دوباره باز کنید.</p>'})}
@@ -97,10 +114,19 @@ function openContact(){show('contact');
 function openAdmin(){show('admin');token&&managerAccess?adminView():loginView()}
 function loginView(m){$('in').innerHTML='<h3 style="margin:0 0 8px">ورود مدیر</h3><input id="em" type="email" placeholder="ایمیل" dir="ltr"><input id="pw" type="password" placeholder="رمز عبور" dir="ltr"><button class="btn" onclick="login()">ورود</button><p class="err">'+(m||'')+'</p>'}
 function login(){
- fetch(SB+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({email:val('em').trim(),password:val('pw')})})
- .then(function(r){return r.json()}).then(function(d){if(!d.access_token)return loginView('ایمیل یا رمز عبور اشتباه است.');token=d.access_token;api('rpc/shop_is_admin').then(function(ok){if(ok===true){managerAccess=true;adminView()}else{token=null;managerAccess=false;loginView('این حساب در فهرست مدیران مجاز برق‌یار نیست.')}}).catch(function(){token=null;managerAccess=false;loginView('تأیید دسترسی مدیر انجام نشد. دوباره تلاش کنید.')})}).catch(function(){loginView('خطا در اتصال.')})
+ adminAuthClient.auth.signInWithPassword({email:val('em').trim(),password:val('pw')})
+ .then(function(result){
+  if(result.error||!result.data||!result.data.session)return loginView('ایمیل یا رمز عبور اشتباه است.');
+  token=result.data.session.access_token;
+  return api('rpc/shop_is_admin',{method:'POST'}).then(function(ok){
+   if(ok===true){managerAccess=true;activationUnlocked=true;hideActivationGate();adminView()}
+   else{token=null;managerAccess=false;return adminAuthClient.auth.signOut().then(function(){loginView('این حساب در فهرست مدیران مجاز برق‌یار نیست.')})}
+  });
+ }).catch(function(){token=null;managerAccess=false;loginView('تأیید ورود مدیر انجام نشد. اتصال را بررسی و دوباره تلاش کنید.')});
 }
-function logout(){token=null;managerAccess=false;closeSh();if(!activationUnlocked)showActivationGate()}
+function logout(){
+ adminAuthClient.auth.signOut().finally(function(){token=null;managerAccess=false;closeSh();if(!activationUnlocked)showActivationGate()});
+}
 function fail(e){$('ab').innerHTML='<p class="err">دسترسی ندارید یا خطایی رخ داد. با ایمیل مدیر وارد شوید.</p>'}
 
 function ost(i,s){api('rpc/shop_admin_set_order_status',{method:'POST',body:{p_order_id:O[i].id,p_status:s}}).then(ordersView).catch(function(e){alert(errMsg(e)||'انجام نشد')})}
