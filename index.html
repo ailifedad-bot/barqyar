@@ -104,6 +104,32 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 .rpt-fin-title{margin:18px 0 8px}
 @media(max-width:390px){.rpt-summary{gap:4px}.rpt-count-card{padding:8px 4px}.rpt-count-card b{font-size:11px}.rpt-count-card strong{font-size:22px}.rpt-count-card small{font-size:9px}}
 
+
+.customer-settings{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px;margin-bottom:12px}
+.customer-settings .g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.customer-settings label,.customer-edit label{display:block;font-size:12px;color:var(--mu)}
+.customer-settings input{margin:5px 0}
+.customer-card{border-inline-start:5px solid var(--bd);padding:12px}
+.customer-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.customer-badge{display:inline-flex;align-items:center;border-radius:999px;padding:5px 11px;font-size:12px;font-weight:800;border:1px solid currentColor}
+.cg-active{color:#15803d;background:#dcfce7;border-color:#86efac}
+.cg-small{color:#0369a1;background:#e0f2fe;border-color:#7dd3fc}
+.cg-loyal{color:#6d28d9;background:#ede9fe;border-color:#c4b5fd}
+.cg-bulk{color:#c2410c;background:#ffedd5;border-color:#fdba74}
+.cg-company{color:#1e3a8a;background:#dbeafe;border-color:#93c5fd}
+.cg-project{color:#0f766e;background:#ccfbf1;border-color:#5eead4}
+.cg-marketer{color:#854d0e;background:#fef3c7;border-color:#fcd34d}
+.cg-other{color:#475569;background:#f1f5f9;border-color:#cbd5e1}
+.customer-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:10px 0}
+.customer-stats>div{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:8px 5px;min-width:0;text-align:center}
+.customer-stats small,.customer-stats b{display:block}
+.customer-stats small{font-size:10px;color:var(--mu)}
+.customer-stats b{font-size:13px;overflow-wrap:anywhere;margin-top:3px}
+.customer-edit{margin-top:10px;border-top:1px solid var(--bd);padding-top:9px}
+.customer-edit summary{cursor:pointer;color:var(--ac2);font-weight:700;font-size:13px}
+.customer-edit input,.customer-edit textarea{margin:5px 0}
+@media(max-width:390px){.customer-stats{gap:4px}.customer-stats>div{padding:7px 3px}.customer-stats b{font-size:11px}.customer-settings .g{grid-template-columns:1fr}}
+
 #pa{display:none}
 @page{margin:14mm}
 @media print{body.pr>*:not(#pa){display:none!important}body.pr{background:#fff;padding:0}body.pr #pa{display:block;color:#000;background:#fff;font-size:13px;line-height:1.8}#pa table{width:100%;border-collapse:collapse}#pa th,#pa td{border:1px solid #777;padding:5px 7px;text-align:right}#pa th{background:#eee}}
@@ -122,7 +148,7 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 <div class="sheet" id="sh" onclick="if(event.target===this)closeSh()"><div class="in" id="in"></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
-<script src="app.js?v=barqyar-customer-delete-fix-v6-20261120"></script>
+<script src="app.js?v=barqyar-customer-groups-v1-20261120"></script>
 
 <script>
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
