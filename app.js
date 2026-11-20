@@ -43,7 +43,7 @@ function initActivation(){
   if(session&&session.access_token){
    token=session.access_token;
    return api('rpc/shop_is_admin',{method:'POST'}).then(function(isAdmin){
-    if(isAdmin===true){managerAccess=true;activationUnlocked=true;load();startProductRealtime();return true}
+    if(isAdmin===true){managerAccess=true;load();startProductRealtime();return true}
     managerAccess=false;token=null;
     return adminAuthClient.auth.signOut().then(function(){return false});
    }).catch(function(){managerAccess=false;token=null;return false});
@@ -119,13 +119,18 @@ function login(){
   if(result.error||!result.data||!result.data.session)return loginView('ایمیل یا رمز عبور اشتباه است.');
   token=result.data.session.access_token;
   return api('rpc/shop_is_admin',{method:'POST'}).then(function(ok){
-   if(ok===true){managerAccess=true;activationUnlocked=true;hideActivationGate();adminView()}
+   if(ok===true){managerAccess=true;hideActivationGate();adminView()}
    else{token=null;managerAccess=false;return adminAuthClient.auth.signOut().then(function(){loginView('این حساب در فهرست مدیران مجاز برق‌یار نیست.')})}
   });
  }).catch(function(){token=null;managerAccess=false;loginView('تأیید ورود مدیر انجام نشد. اتصال را بررسی و دوباره تلاش کنید.')});
 }
 function logout(){
- adminAuthClient.auth.signOut().finally(function(){token=null;managerAccess=false;closeSh();if(!activationUnlocked)showActivationGate()});
+ adminAuthClient.auth.signOut().finally(function(){
+  token=null;managerAccess=false;closeSh();
+  api('rpc/shop_check_activation',{method:'POST',body:{p_device_id:activationIdentity.id,p_device_secret:activationIdentity.secret}})
+   .then(function(ok){activationUnlocked=ok===true;if(activationUnlocked){load();startProductRealtime()}else showActivationGate()})
+   .catch(function(){activationUnlocked=false;showActivationGate('برای ادامه استفاده، وضعیت فعال‌سازی دستگاه بررسی نشد. اتصال اینترنت را بررسی کنید.')});
+ });
 }
 function fail(e){$('ab').innerHTML='<p class="err">دسترسی ندارید یا خطایی رخ داد. با ایمیل مدیر وارد شوید.</p>'}
 
