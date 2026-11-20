@@ -27,7 +27,7 @@ window.addEventListener('online',function(){refreshProducts()});
 function cats(){return ['همه'].concat(P.map(function(x){return x.category}).filter(function(v,i,a){return v&&a.indexOf(v)===i}))}
 function chg(id,d){cart[id]=Math.max(0,(cart[id]||0)+d);if(!cart[id])delete cart[id];saved=false;draw();if(mode==='cart')cartView()}
 function show(m){mode=m;$('sh').className='sheet o'}
-function closeSh(){$('sh').className='sheet';mode=''}
+var orderPdfUrl=null;\nfunction closeSh(){if(orderPdfUrl){URL.revokeObjectURL(orderPdfUrl);orderPdfUrl=null}$('sh').className='sheet';mode=''}
 function lines(){var t=0,n=0,a=[];P.forEach(function(x){var q=cart[x.id];if(!q)return;t+=q*x.price;n+=q;a.push({product_id:x.id,name:x.name,unit:x.unit,qty:q,price:x.price})});return {a:a,t:t,n:n}}
 function openCart(){show('cart');cartView()}
 function cartView(){
@@ -124,7 +124,7 @@ function masterSave(code){
 
 /* ---- بهبودها: عکس کالا، کد پیگیری، گزارش، اعلان ---- */
 var productPollT=null;
-var ST={new:'جدید',confirmed:'تأییدشده',preparing:'آماده‌سازی',shipping:'در حال ارسال',done:'تحویل‌شده',cancelled:'لغوشده'};
+var ST={shipping:'ارسال‌شده؛ در انتظار تأیید دریافت',done:'تحویل نهایی‌شده',cancelled:'لغوشده'};
 var code='',pollT=null,lastNew=-1;
 function genCode(){var a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',s='BY-',b=new Uint8Array(6);crypto.getRandomValues(b);for(var i=0;i<6;i++)s+=a[b[i]%a.length];return s}
 function draw(){
@@ -163,7 +163,7 @@ function openTrackForCurrentOrder(){
 function go(el,k){
  if(!val('nm').trim()||!val('ph').trim()||!val('ad').trim()){$('er').textContent='لطفاً نام، شماره تماس و آدرس را کامل کنید.';return false}
  var L=lines();
- if(!saved){saved=true;code=genCode();api('shop_orders',{method:'POST',prefer:'return=minimal',keep:1,body:{customer_name:val('nm').trim(),phone:toEn(val('ph').trim()),address:val('ad').trim(),items:L.a,total:L.t,tracking_code:code}}).catch(function(e){saved=false;var m=errMsg(e),r=$('er');if(r){r.className='err';r.textContent='سفارش از طریق پیام ارسال شد، ولی در سامانه ثبت نشد'+(m?': '+m:'')+'. اپراتور از روی پیام پیگیری می‌کند.'}})}
+ if(!saved){saved=true;code=genCode();api('shop_orders',{method:'POST',prefer:'return=minimal',keep:1,body:{customer_name:val('nm').trim(),phone:toEn(val('ph').trim()),address:val('ad').trim(),items:L.a,total:L.t,tracking_code:code,status:'shipping'}}).catch(function(e){saved=false;var m=errMsg(e),r=$('er');if(r){r.className='err';r.textContent='سفارش از طریق پیام ارسال شد، ولی در سامانه ثبت نشد'+(m?': '+m:'')+'. اپراتور از روی پیام پیگیری می‌کند.'}})}
  var t=orderText();
  showOrderReceipt();
  $('er').className='okc';$('er').textContent='سفارش آماده ارسال شد. کد پیگیری و چهار رقم آخر همان شماره موبایلی که در فرم همین سفارش وارد کردید، در این صفحه نمایش داده شده است.';
@@ -196,29 +196,36 @@ function adminView(){
  startPoll();
 }
 
-function ordersView(){api('shop_orders?select=*&report_archived_at=is.null&order=created_at.desc&limit=100').then(function(d){O=d||[];
- $('ab').innerHTML=O.length?O.map(function(o,i){
-  var aw=o.status==='shipping'&&o.customer_confirmed_at,a='',nx=o.status==='new'?'بررسی و تأیید سفارش توسط مدیر':o.status==='confirmed'?'آماده‌سازی کالا':o.status==='preparing'?'ثبت تحویل به ارسال‌کننده':o.status==='shipping'?(o.customer_confirmed_at?'ثبت تحویل نهایی توسط مدیر':'انتظار برای تأیید دریافت مشتری'):o.status==='done'?'پایان؛ سفارش تحویل نهایی شد':'سفارش لغو شده است';
-  if(o.status==='new')a+='<button onclick="ost('+i+',\'confirmed\')">تأیید سفارش</button>';
-  if(o.status==='confirmed')a+='<button onclick="ost('+i+',\'preparing\')">آماده‌سازی</button>';
-  if(o.status==='preparing')a+='<button onclick="ost('+i+',\'shipping\')">تحویل به ارسال‌کننده</button>';
-  if(o.status==='shipping'&&o.customer_confirmed_at)a+='<div class="cfbox" style="width:100%"><b>مشتری دریافت همین سفارش را تأیید کرده است.</b><label class="mu" for="odcode_'+i+'">کادر مخصوص کد یکتای سفارش</label><input id="odcode_'+i+'" dir="ltr" value="'+esc(o.tracking_code||'')+'" placeholder="کد یکتای سفارش" autocomplete="off"><button class="dlbtn" onclick="odeliver('+i+')">🟣 تأیید نهایی همین سفارش توسط مدیر</button></div>';
-  if(o.status==='done')a+='<button onclick="docOrder('+i+')">📄 سند تحویل (PDF)</button>';
-  if(o.status!=='done'&&o.status!=='cancelled')a+='<button onclick="ost('+i+',\'cancelled\')">لغو</button>';
-  if(o.status!=='done')a+='<button onclick="odel('+i+')">حذف</button>';
-  return '<div class="ar'+(aw?' await':'')+'">'+(aw?'<div class="cfok" style="border-color:var(--dl);color:var(--dl);background:rgba(124,58,237,.1);margin:0 0 8px">مشتری دریافت کالا را تأیید کرد. اکنون می‌توانید تحویل نهایی را ثبت کنید.</div>':(o.status==='shipping'?'<div class="cfbox">در انتظار تأیید دریافت توسط مشتری؛ پس از تأیید، دکمه تحویل نهایی فعال می‌شود.</div>':''))+
-  '<div class="row" style="border:0"><b>'+esc(o.customer_name)+'</b><span class="st">'+ST[o.status]+'</span></div><div class="mu" style="margin:4px 0">گام بعدی: <b>'+nx+'</b></div><div class="mu" dir="ltr" style="text-align:right">'+esc(o.tracking_code||'')+'</div><div class="mu">'+esc(o.phone)+' · '+new Date(o.created_at).toLocaleString('fa-IR')+'</div><div class="mu">'+esc(o.address)+'</div>'+
-  o.items.map(function(x){return '<div style="font-size:13px">• '+esc(x.name)+' × '+f(x.qty)+(x.price?' · '+pr(x.price*x.qty):'')+'</div>'}).join('')+'<div class="tot" style="padding:6px 0">'+pr(o.total)+'</div>'+
-  (o.customer_confirmed_at?'<span class="tag c">✔ تأیید مشتری · '+dt(o.customer_confirmed_at)+'</span>':'<span class="tag">در انتظار تأیید مشتری</span>')+(o.delivered_at?'<span class="tag d">✔ تأیید نهایی مدیر · '+dt(o.delivered_at)+'</span>':'')+'<div class="acts">'+a+'</div></div>'}).join(''):'<p class="mu">هنوز سفارشی ثبت نشده است.</p>';
- lastNew=O.filter(function(o){return o.status==='new'}).length;badge(lastNew)}).catch(fail)}
+function ordersView(){
+ api('shop_orders?select=*&report_archived_at=is.null&order=created_at.desc&limit=100').then(function(d){
+  O=d||[];
+  $('ab').innerHTML=O.length?O.map(function(o,i){
+   var a='';
+   if(o.status==='shipping'&&o.customer_confirmed_at)
+    a+='<div class="cfbox" style="width:100%"><b>مشتری دریافت همین سفارش را تأیید کرده است.</b><label class="mu" for="odcode_'+i+'">کد یکتای سفارش</label><input id="odcode_'+i+'" dir="ltr" value="'+esc(o.tracking_code||'')+'" placeholder="کد یکتای سفارش" autocomplete="off"><button class="dlbtn" onclick="odeliver('+i+')">ثبت تحویل نهایی توسط مدیر</button></div>';
+   if(o.status==='done')a+='<span class="tag c">✔ تحویل نهایی ثبت شده</span>';
+   if(o.status!=='done'&&o.status!=='cancelled')a+='<button onclick="ost('+i+',\'cancelled\')">لغو سفارش</button>';
+   return '<div class="ar">'+
+    '<div class="row" style="border:0"><b>'+esc(o.customer_name)+'</b><span class="st">'+esc(ST[o.status]||o.status||'نامشخص')+'</span></div>'+
+    '<div class="mu" style="margin:4px 0">'+(o.status==='shipping'?(o.customer_confirmed_at?'اقدام بعدی: بررسی کد و ثبت تحویل نهایی توسط مدیر':'سفارش ارسال شده؛ منتظر تأیید دریافت مشتری'):(o.status==='done'?'سفارش تکمیل شده':'سفارش لغو شده'))+'</div>'+
+    '<div class="mu" dir="ltr" style="text-align:right">'+esc(o.tracking_code||'')+'</div><div class="mu">'+esc(o.phone||'')+' · '+dt(o.created_at)+'</div><div class="mu">'+esc(o.address||'')+'</div>'+
+    (Array.isArray(o.items)?o.items:[]).map(function(x){return '<div style="font-size:13px">• '+esc(x.name)+' × '+f(x.qty)+(x.unit?' '+esc(x.unit):'')+(x.price?' · '+pr(x.price*x.qty):'')+'</div>'}).join('')+
+    '<div class="tot" style="padding:6px 0">'+pr(o.total)+'</div>'+
+    (o.customer_confirmed_at?'<span class="tag c">✔ تأیید مشتری · '+dt(o.customer_confirmed_at)+'</span>':'<span class="tag">در انتظار تأیید مشتری</span>')+
+    (o.delivered_at?'<span class="tag d">✔ تأیید نهایی مدیر · '+dt(o.delivered_at)+'</span>':'')+
+    '<div class="acts"><button class="dlbtn" onclick="docOrder('+i+')">📄 مشاهده گزارش سفارش (PDF)</button>'+a+'</div></div>';
+  }).join(''):'<p class="mu">هنوز سفارشی ثبت نشده است.</p>';
+  lastNew=O.filter(function(o){return o.status==='shipping'&&!o.customer_confirmed_at}).length;
+  badge(lastNew);
+ }).catch(fail)
+}
 function reportView(){
  api('shop_orders?select=*&status=neq.cancelled&report_archived_at=is.null&order=created_at.desc&limit=1000').then(function(d){
   d=d||[];O=d;
   var done=d.filter(function(o){return o.status==='done'&&!!o.customer_confirmed_at&&!!o.delivered_at&&o.delivery_verified===true});
   var waitCustomer=d.filter(function(o){return o.status==='shipping'&&!o.customer_confirmed_at&&!o.delivered_at&&!o.delivery_verified});
   var waitManager=d.filter(function(o){return o.status==='shipping'&&!!o.customer_confirmed_at&&!o.delivered_at&&!o.delivery_verified});
-  var early=d.filter(function(o){return ['new','confirmed','preparing'].indexOf(o.status)>-1});
-  var review=d.filter(function(o){return done.indexOf(o)<0&&waitCustomer.indexOf(o)<0&&waitManager.indexOf(o)<0&&early.indexOf(o)<0});
+  var review=d.filter(function(o){return done.indexOf(o)<0&&waitCustomer.indexOf(o)<0&&waitManager.indexOf(o)<0});
   var now=Date.now(),day=864e5,s=new Date();s.setHours(0,0,0,0);
   var R=[['امروز',s.getTime()],['۷ روز اخیر',now-7*day],['۳۰ روز اخیر',now-30*day],['کل',0]];
   var h='<div class="rpt-intro"><b>گزارش وضعیت سفارش‌ها</b><p>هر سفارش بر اساس وضعیت ثبت‌شده در پایگاه داده در یکی از گروه‌های زیر قرار می‌گیرد. وضعیت‌ها با به‌روزرسانی اطلاعات سفارش تغییر می‌کنند.</p></div>';
@@ -233,7 +240,6 @@ function reportView(){
    if(kind==='done')action='<div class="rpt-action">اقدام لازم: سفارش تکمیل شده است. برای بایگانی، سند تحویل را چاپ یا به PDF ذخیره کنید.</div><button class="rpt-btn rpt-btn-green" onclick="docOrder('+i+')">📄 سند تحویل همین سفارش</button>';
    if(kind==='customer')action='<div class="rpt-action">اقدام مدیر: فعلاً تأیید نهایی نکنید. با مشتری پیگیری کنید تا پس از دریافت واقعی کالا، از لینک پیگیری سفارش دریافت را تأیید کند.</div>';
    if(kind==='manager')action='<div class="rpt-action">اقدام لازم: کد یکتای همین سفارش را بررسی کنید و پس از تطبیق، تأیید نهایی مدیر را ثبت کنید.</div><label class="rpt-label" for="odcode_'+i+'">کد یکتای همین سفارش</label><input class="rpt-code" id="odcode_'+i+'" dir="ltr" autocomplete="off" value="'+esc(o.tracking_code||'')+'"><button class="rpt-btn rpt-btn-purple" onclick="odeliver('+i+')">تأیید نهایی توسط مدیر</button>';
-   if(kind==='early')action='<div class="rpt-action">اقدام بعدی: '+(o.status==='new'?'مدیر سفارش را بررسی و تأیید کند.':o.status==='confirmed'?'مدیر آماده‌سازی کالا را ثبت کند.':'مدیر تحویل سفارش به ارسال‌کننده را ثبت کند.')+'</div>';
    if(kind==='review')action=o.status==='done'?'<div class="rpt-warning">این سفارش در جدول با وضعیت «تحویل‌شده» ثبت شده، اما حداقل یکی از مدارک تأیید مشتری یا تأیید نهایی مدیر ناقص است. بنابراین در شمار تکمیل‌شده‌ها قرار نمی‌گیرد. مدیر باید سوابق را بررسی کند؛ اطلاعات قبلی به‌صورت خودکار تغییر داده نشده است.</div>':'<div class="rpt-action">اقدام لازم: وضعیت این سفارش با مراحل استاندارد همخوان نیست. پیش از هر تأیید، جزئیات آن را در بخش سفارش‌ها بررسی کنید.</div>';
    var history=(o.customer_confirmed_at?'<span class="tag c">✔ تأیید مشتری · '+dt(o.customer_confirmed_at)+'</span>':'')+(o.delivered_at?'<span class="tag d">✔ تأیید نهایی مدیر · '+dt(o.delivered_at)+'</span>':'');
    if(kind==='done'&&!o.delivered_at)history+='<div class="rpt-warning">نکته سوابق: وضعیت سفارش «تکمیل‌شده» است، اما زمان تحویل نهایی در رکورد ثبت نشده است. وضعیت سفارش تغییر داده نشده؛ این مورد را برای تکمیل سوابق بررسی کنید.</div>';
@@ -245,7 +251,6 @@ function reportView(){
   h+=group('سفارش‌های تکمیل‌شده','تأیید مشتری و تأیید نهایی مدیر هر دو با زمان و نشان تأیید معتبر در پایگاه داده ثبت شده‌اند.','rpt-green',done,'done');
   h+=group('در انتظار تأیید مشتری','سفارش ارسال شده است؛ مشتری باید پس از دریافت واقعی کالا، دریافت را از طریق کد پیگیری تأیید کند.','rpt-amber',waitCustomer,'customer');
   h+=group('در انتظار تأیید مدیر','تأیید دریافت مشتری ثبت شده است؛ مدیر باید کد یکتا را کنترل و تحویل نهایی را ثبت کند.','rpt-purple',waitManager,'manager');
-  if(early.length)h+=group('در مراحل اولیه پردازش','این سفارش‌ها هنوز به مرحله ارسال نرسیده‌اند و جزو سه گروه تحویل نیستند.','rpt-blue',early,'early');
   if(review.length)h+=group('نیازمند بررسی وضعیت','این سفارش‌ها تأییدهای کامل و قابل استناد ندارند یا وضعیت آن‌ها با مراحل استاندارد همخوان نیست؛ پیش از اقدام بررسی شوند.','rpt-red',review,'review');
   var active=d.filter(function(o){return o.status!=='cancelled'});
   h+='<h4 class="rpt-fin-title">خلاصه مالی سفارش‌ها</h4><div class="g2">'+R.map(function(r){var l=active.filter(function(o){return new Date(o.created_at).getTime()>=r[1]});var t=l.reduce(function(a,o){return a+Number(o.total||0)},0);return '<div class="ar"><div class="mu">'+r[0]+'</div><b>'+pr(t)+'</b><div class="mu">'+f(l.length)+' سفارش</div></div>'}).join('')+'</div>';
@@ -292,7 +297,7 @@ function rmImg(i){api('shop_products?id=eq.'+P[i].id,{method:'PATCH',prefer:'ret
 function badge(n){var b=$('admb');if(b)b.innerHTML='⚙️ مدیر'+(n>0?'<span class="bdg">'+f(n)+'</span>':'')}
 function beep(){try{var c=new (window.AudioContext||window.webkitAudioContext)(),o=c.createOscillator();o.connect(c.destination);o.frequency.value=880;o.start();setTimeout(function(){o.stop();c.close()},350)}catch(e){}}
 function chk(){if(!token){clearInterval(pollT);pollT=null;lastNew=-1;badge(0);return}
- api('shop_orders?select=id&status=eq.new').then(function(d){var n=(d||[]).length;badge(n);
+ api('shop_orders?select=id&status=eq.shipping&customer_confirmed_at=is.null').then(function(d){var n=(d||[]).length;badge(n);
   if(lastNew>=0&&n>lastNew){beep();try{if(window.Notification&&Notification.permission==='granted')new Notification('سفارش جدید در برق‌یار')}catch(e){}if(mode==='admin'&&tab==='orders')ordersView()}
   lastNew=n}).catch(function(){})}
 function startPoll(){try{if(window.Notification&&Notification.permission==='default')Notification.requestPermission()}catch(e){}if(pollT)return;chk();pollT=setInterval(chk,30000)}
@@ -347,13 +352,25 @@ function printDoc(h){if(!token)return;var d=document.createElement('div');d.id='
  window.addEventListener('afterprint',done);setTimeout(function(){window.print()},200)}
 function docHead(t){return '<div style="text-align:center;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:12px"><h1 style="margin:0;font-size:22px">⚡ برق‌یار</h1><div style="font-size:16px;font-weight:700">'+t+'</div><div>تلفن: <span dir="ltr">'+PHONE+'</span></div></div>'}
 function docFoot(){return '<div style="margin-top:18px;font-size:11px;border-top:1px solid #888;padding-top:6px">'+esc(CRT)+'<br>تاریخ صدور سند: '+dt(Date.now())+'</div>'}
-function docOrder(i){if(!token)return;var o=O[i];
- var rows=o.items.map(function(x,n){return '<tr><td>'+f(n+1)+'</td><td>'+esc(x.name)+'</td><td>'+esc(x.unit||'')+'</td><td>'+f(x.qty)+'</td><td>'+pr(x.price)+'</td><td>'+pr(x.price*x.qty)+'</td></tr>'}).join('');
- printDoc(docHead('سند تحویل کالا')+
- '<table><tr><td>کد یکتای سفارش</td><td dir="ltr" style="text-align:right"><b>'+esc(o.tracking_code||'')+'</b></td><td>تاریخ ثبت</td><td>'+dt(o.created_at)+'</td></tr><tr><td>مشتری</td><td>'+esc(o.customer_name)+'</td><td>تلفن</td><td>'+esc(o.phone)+'</td></tr><tr><td>آدرس</td><td colspan="3">'+esc(o.address)+'</td></tr></table><br>'+
- '<table><tr><th>#</th><th>کالا</th><th>واحد</th><th>تعداد</th><th>قیمت واحد</th><th>جمع</th></tr>'+rows+'<tr><td colspan="5"><b>جمع کل</b></td><td><b>'+pr(o.total)+'</b></td></tr></table><br>'+
- '<table><tr><td>تأیید دریافت کالا توسط مشتری</td><td>'+(o.customer_confirmed_at?'✔ '+dt(o.customer_confirmed_at):'ثبت نشده')+'</td></tr><tr><td>تحویل نهایی و تأیید مدیر (با کد یکتای سفارش)</td><td>'+(o.delivered_at?'✔ '+dt(o.delivered_at):'ثبت نشده')+'</td></tr></table>'+
- '<div style="display:flex;justify-content:space-between;margin-top:36px"><div>امضای مشتری: ____________</div><div>امضا و مهر مدیر: ____________</div></div>'+docFoot())}
+function docOrder(i){
+ if(!token||!managerAccess||!O[i])return;
+ var o=O[i],items=Array.isArray(o.items)?o.items:[];
+ var rows=items.map(function(x,n){return '<tr><td>'+f(n+1)+'</td><td>'+esc(x.name)+'</td><td>'+esc(x.unit||'')+'</td><td>'+f(x.qty)+'</td><td>'+pr(x.price)+'</td><td>'+pr(Number(x.price||0)*Number(x.qty||0))+'</td></tr>'}).join('');
+ var report='<div id="orderPdfSource" dir="rtl" style="position:fixed;left:-10000px;top:0;width:780px;padding:22px;background:#fff;color:#111;font-family:Vazirmatn,Tahoma,sans-serif;font-size:13px;line-height:1.9">'+
+  docHead('گزارش سفارش کالا')+
+  '<table><tr><td>کد یکتای سفارش</td><td dir="ltr"><b>'+esc(o.tracking_code||'')+'</b></td><td>تاریخ ثبت</td><td>'+dt(o.created_at)+'</td></tr><tr><td>وضعیت</td><td>'+esc(ST[o.status]||o.status||'')+'</td><td>مبلغ کل</td><td><b>'+pr(o.total)+'</b></td></tr><tr><td>نام مشتری</td><td>'+esc(o.customer_name||'')+'</td><td>شماره تماس</td><td dir="ltr">'+esc(o.phone||'')+'</td></tr><tr><td>نشانی تحویل</td><td colspan="3">'+esc(o.address||'')+'</td></tr></table><br>'+
+  '<table><tr><th>ردیف</th><th>نام کالا</th><th>واحد</th><th>تعداد</th><th>قیمت واحد</th><th>مبلغ ردیف</th></tr>'+rows+'<tr><td colspan="5"><b>جمع کل سفارش</b></td><td><b>'+pr(o.total)+'</b></td></tr></table><br>'+
+  '<table><tr><td>تأیید دریافت مشتری</td><td>'+(o.customer_confirmed_at?'ثبت شده · '+dt(o.customer_confirmed_at):'در انتظار تأیید')+'</td></tr><tr><td>تأیید نهایی مدیر</td><td>'+(o.delivered_at?'ثبت شده · '+dt(o.delivered_at):'ثبت نشده')+'</td></tr></table>'+docFoot()+'</div>';
+ $('in').innerHTML='<div class="row"><b>گزارش سفارش (PDF)</b><button class="link" onclick="closeSh()">بستن</button></div><p class="mu">گزارش همین سفارش در پنجره زیر نمایش داده می‌شود. از ابزارهای نمایش PDF می‌توانید آن را چاپ یا ذخیره کنید.</p><div id="orderPdfFrame" style="width:100%;height:68vh;min-height:420px;background:#eee;border:1px solid var(--bd);border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center">در حال ساخت فایل PDF…</div><div id="orderPdfDownload" style="margin-top:8px"></div>'+report;
+ if(!window.html2pdf){$('orderPdfFrame').textContent='ابزار ساخت PDF بارگذاری نشده است. اتصال اینترنت را بررسی و صفحه را تازه کنید.';return}
+ html2pdf().set({margin:8,filename:'barqyar-order-'+String(o.tracking_code||o.id)+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from($('orderPdfSource')).outputPdf('blob').then(function(blob){
+  if(!$('orderPdfFrame'))return;
+  if(orderPdfUrl)URL.revokeObjectURL(orderPdfUrl);
+  orderPdfUrl=URL.createObjectURL(blob);
+  $('orderPdfFrame').innerHTML='<iframe title="گزارش سفارش PDF" src="'+orderPdfUrl+'" style="width:100%;height:100%;border:0;background:#fff"></iframe>';
+  $('orderPdfDownload').innerHTML='<a class="btn dl" href="'+orderPdfUrl+'" download="barqyar-order-'+esc(o.tracking_code||o.id)+'.pdf">⬇️ دریافت فایل PDF</a>';
+ }).catch(function(e){$('orderPdfFrame').textContent='ساخت PDF انجام نشد. دوباره تلاش کنید.';console.error('Order PDF generation failed',e)});
+}
 function docFinal(){if(!token)return;
  api('shop_orders?select=*&status=eq.done&report_archived_at=is.null&order=delivered_at.desc.nullslast&limit=1000').then(function(d){d=d||[];
   var sum=d.reduce(function(a,o){return a+Number(o.total)},0),cc=d.filter(function(o){return o.customer_confirmed_at}).length;
