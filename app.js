@@ -42,7 +42,7 @@ function initActivation(){
   var session=result&&result.data&&result.data.session;
   if(session&&session.access_token){
    token=session.access_token;
-   return api('rpc/shop_is_admin',{method:'POST'}).then(function(isAdmin){
+   return api('rpc/shop_is_admin').then(function(isAdmin){
     if(isAdmin===true){managerAccess=true;load();startProductRealtime();return true}
     managerAccess=false;token=null;
     return adminAuthClient.auth.signOut().then(function(){return false});
@@ -118,7 +118,7 @@ function login(){
  .then(function(result){
   if(result.error||!result.data||!result.data.session)return loginView('ایمیل یا رمز عبور اشتباه است.');
   token=result.data.session.access_token;
-  return api('rpc/shop_is_admin',{method:'POST'}).then(function(ok){
+  return api('rpc/shop_is_admin').then(function(ok){
    if(ok===true){managerAccess=true;hideActivationGate();adminView()}
    else{token=null;managerAccess=false;return adminAuthClient.auth.signOut().then(function(){loginView('این حساب در فهرست مدیران مجاز برق‌یار نیست.')})}
   });
