@@ -213,10 +213,10 @@ function customersView(){
  Promise.all([
   api('shop_customers?select=id,subscription_code,full_name,phone,phone_normalized,last_address,created_at,customer_group,customer_group_manual&order=created_at.desc&limit=2000'),
   api('shop_orders?select=id,customer_id,phone,total,status,created_at&limit=5000'),
-  api('shop_customer_group_settings?select=*&id=eq.1')
+  api('shop_settings?select=customer_active_days,customer_loyal_min_orders,customer_bulk_min_total_toman&id=eq.1')
  ]).then(function(r){
   CUSTOMERS=r[0]||[];CUSTOMER_ORDERS=r[1]||[];
-  if(r[2]&&r[2][0])CUSTOMER_GROUP_SETTINGS=r[2][0];
+  if(r[2]&&r[2][0])CUSTOMER_GROUP_SETTINGS={active_days:r[2][0].customer_active_days,loyal_min_orders:r[2][0].customer_loyal_min_orders,bulk_min_total_toman:r[2][0].customer_bulk_min_total_toman};
   $('cgActiveDays').value=CUSTOMER_GROUP_SETTINGS.active_days||90;
   $('cgLoyalOrders').value=CUSTOMER_GROUP_SETTINGS.loyal_min_orders||3;
   $('cgBulkTotal').value=CUSTOMER_GROUP_SETTINGS.bulk_min_total_toman||'';
@@ -226,8 +226,8 @@ function customersView(){
 function customerSettingsSave(){
  var days=Number(val('cgActiveDays')),loyal=Number(val('cgLoyalOrders')),bulkRaw=val('cgBulkTotal').trim(),bulk=bulkRaw===''?null:Number(bulkRaw);
  if(!Number.isInteger(days)||days<1||days>3650||!Number.isInteger(loyal)||loyal<2||loyal>10000||(bulk!==null&&(!Number.isFinite(bulk)||bulk<=0))){alert('معیارها را به‌درستی وارد کنید.');return}
- api('shop_customer_group_settings?id=eq.1',{method:'PATCH',prefer:'return=representation',body:{active_days:days,loyal_min_orders:loyal,bulk_min_total_toman:bulk,updated_at:new Date().toISOString()}})
- .then(function(d){if(!d||!d.length)throw new Error('تنظیمات ذخیره نشد');CUSTOMER_GROUP_SETTINGS=d[0];filterCustomers();alert('معیارهای دسته‌بندی ذخیره شد.')})
+ api('shop_settings?id=eq.1',{method:'PATCH',prefer:'return=representation',body:{customer_active_days:days,customer_loyal_min_orders:loyal,customer_bulk_min_total_toman:bulk}})
+ .then(function(d){if(!d||!d.length)throw new Error('تنظیمات ذخیره نشد');CUSTOMER_GROUP_SETTINGS={active_days:d[0].customer_active_days,loyal_min_orders:d[0].customer_loyal_min_orders,bulk_min_total_toman:d[0].customer_bulk_min_total_toman};filterCustomers();alert('معیارهای دسته‌بندی ذخیره شد.')})
  .catch(function(e){alert('ذخیره معیارها انجام نشد: '+(errMsg(e)||'دسترسی مدیر را بررسی کنید'))});
 }
 function customerSaveGroup(id){
