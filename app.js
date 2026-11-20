@@ -204,7 +204,7 @@ function rmImg(i){api('shop_products?id=eq.'+P[i].id,{method:'PATCH',prefer:'ret
 function badge(n){var b=$('admb');if(b)b.innerHTML='⚙️ مدیر'+(n>0?'<span class="bdg">'+f(n)+'</span>':'')}
 function beep(){try{var c=new (window.AudioContext||window.webkitAudioContext)(),o=c.createOscillator();o.connect(c.destination);o.frequency.value=880;o.start();setTimeout(function(){o.stop();c.close()},350)}catch(e){}}
 function chk(){if(!token){clearInterval(pollT);pollT=null;lastNew=-1;badge(0);return}
- api('shop_orders?select=id&status=eq.shipping&customer_confirmed_at=is.null').then(function(d){var n=(d||[]).length;badge(n);
+ api('shop_orders?select=id&status=eq.shipping').then(function(d){var n=(d||[]).length;badge(n);
   if(lastNew>=0&&n>lastNew){beep();try{if(window.Notification&&Notification.permission==='granted')new Notification('سفارش جدید در برق‌یار')}catch(e){}if(mode==='admin'&&tab==='orders')ordersView()}
   lastNew=n}).catch(function(){})}
 function startPoll(){try{if(window.Notification&&Notification.permission==='default')Notification.requestPermission()}catch(e){}if(pollT)return;chk();pollT=setInterval(chk,30000)}
