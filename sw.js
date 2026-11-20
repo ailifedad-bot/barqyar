@@ -1,4 +1,4 @@
-var CACHE='barqyar-v35-one-time-activation-20261120';
+var CACHE='barqyar-v36-admin-session-persist-20261121';
 var SHELL=['./','index.html','manifest.json','app.js','privacy.html','icon-192.png','icon-512.png'];
 self.addEventListener('install',function(e){
   e.waitUntil(caches.open(CACHE).then(function(c){return c.addAll(SHELL)}).then(function(){return self.skipWaiting()}));
