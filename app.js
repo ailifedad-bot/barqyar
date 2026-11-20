@@ -62,7 +62,7 @@ function logout(){token=null;managerAccess=false;closeSh()}
 function fail(e){$('ab').innerHTML='<p class="err">دسترسی ندارید یا خطایی رخ داد. با ایمیل مدیر وارد شوید.</p>'}
 
 function ost(i,s){api('rpc/shop_admin_set_order_status',{method:'POST',body:{p_order_id:O[i].id,p_status:s}}).then(ordersView).catch(function(e){alert(errMsg(e)||'انجام نشد')})}
-function odel(i){if(confirm('این سفارش حذف شود؟'))api('shop_orders?id=eq.'+O[i].id,{method:'DELETE'}).then(ordersView).catch(fail)}
+function odel(i){rptArchive(i)}
 function psave(i){var b={name:val('pn'+i).trim(),category:val('pc'+i).trim(),price:Number(val('pp'+i))||0,unit:val('pu'+i).trim()||'عدد',emoji:val('pe'+i)||'🔌',in_stock:val('ps'+i)==='1'};
  if(!b.name||!b.category)return alert('نام و دسته را وارد کنید.');
  api('shop_products?id=eq.'+P[i].id,{method:'PATCH',prefer:'return=minimal',body:b}).then(function(){Object.assign(P[i],b);draw();alert('ذخیره شد')}).catch(function(){alert('ذخیره نشد')})}
@@ -196,7 +196,7 @@ function adminView(){
  startPoll();
 }
 
-function ordersView(){api('shop_orders?select=*&order=created_at.desc&limit=100').then(function(d){O=d||[];
+function ordersView(){api('shop_orders?select=*&report_archived_at=is.null&order=created_at.desc&limit=100').then(function(d){O=d||[];
  $('ab').innerHTML=O.length?O.map(function(o,i){
   var aw=o.status==='shipping'&&o.customer_confirmed_at,a='',nx=o.status==='new'?'بررسی و تأیید سفارش توسط مدیر':o.status==='confirmed'?'آماده‌سازی کالا':o.status==='preparing'?'ثبت تحویل به ارسال‌کننده':o.status==='shipping'?(o.customer_confirmed_at?'ثبت تحویل نهایی توسط مدیر':'انتظار برای تأیید دریافت مشتری'):o.status==='done'?'پایان؛ سفارش تحویل نهایی شد':'سفارش لغو شده است';
   if(o.status==='new')a+='<button onclick="ost('+i+',\'confirmed\')">تأیید سفارش</button>';
@@ -212,7 +212,7 @@ function ordersView(){api('shop_orders?select=*&order=created_at.desc&limit=100'
   (o.customer_confirmed_at?'<span class="tag c">✔ تأیید مشتری · '+dt(o.customer_confirmed_at)+'</span>':'<span class="tag">در انتظار تأیید مشتری</span>')+(o.delivered_at?'<span class="tag d">✔ تأیید نهایی مدیر · '+dt(o.delivered_at)+'</span>':'')+'<div class="acts">'+a+'</div></div>'}).join(''):'<p class="mu">هنوز سفارشی ثبت نشده است.</p>';
  lastNew=O.filter(function(o){return o.status==='new'}).length;badge(lastNew)}).catch(fail)}
 function reportView(){
- api('shop_orders?select=*&status=neq.cancelled&order=created_at.desc&limit=1000').then(function(d){
+ api('shop_orders?select=*&status=neq.cancelled&report_archived_at=is.null&order=created_at.desc&limit=1000').then(function(d){
   d=d||[];O=d;
   var done=d.filter(function(o){return o.status==='done'&&!!o.customer_confirmed_at&&!!o.delivered_at&&o.delivery_verified===true});
   var waitCustomer=d.filter(function(o){return o.status==='shipping'&&!o.customer_confirmed_at&&!o.delivered_at&&!o.delivery_verified});
@@ -237,7 +237,7 @@ function reportView(){
    if(kind==='review')action=o.status==='done'?'<div class="rpt-warning">این سفارش در جدول با وضعیت «تحویل‌شده» ثبت شده، اما حداقل یکی از مدارک تأیید مشتری یا تأیید نهایی مدیر ناقص است. بنابراین در شمار تکمیل‌شده‌ها قرار نمی‌گیرد. مدیر باید سوابق را بررسی کند؛ اطلاعات قبلی به‌صورت خودکار تغییر داده نشده است.</div>':'<div class="rpt-action">اقدام لازم: وضعیت این سفارش با مراحل استاندارد همخوان نیست. پیش از هر تأیید، جزئیات آن را در بخش سفارش‌ها بررسی کنید.</div>';
    var history=(o.customer_confirmed_at?'<span class="tag c">✔ تأیید مشتری · '+dt(o.customer_confirmed_at)+'</span>':'')+(o.delivered_at?'<span class="tag d">✔ تأیید نهایی مدیر · '+dt(o.delivered_at)+'</span>':'');
    if(kind==='done'&&!o.delivered_at)history+='<div class="rpt-warning">نکته سوابق: وضعیت سفارش «تکمیل‌شده» است، اما زمان تحویل نهایی در رکورد ثبت نشده است. وضعیت سفارش تغییر داده نشده؛ این مورد را برای تکمیل سوابق بررسی کنید.</div>';
-   return '<article class="rpt-order"><div class="rpt-order-head"><b>'+esc(o.customer_name||'مشتری')+'</b><span class="st">'+esc(ST[o.status]||o.status||'نامشخص')+'</span></div><div class="rpt-meta">کد یکتا: <b dir="ltr">'+esc(o.tracking_code||'ثبت نشده')+'</b></div><div class="rpt-meta">'+esc(o.phone||'')+' · '+dt(o.created_at)+'</div><div class="rpt-meta">'+esc(o.address||'')+'</div>'+items.map(function(x){return '<div class="rpt-item">• '+esc(x.name)+' × '+f(x.qty)+(x.unit?' '+esc(x.unit):'')+(x.price?' · '+pr(Number(x.qty||0)*Number(x.price||0)):'')+'</div>'}).join('')+'<div class="rpt-total">مبلغ سفارش: '+pr(o.total)+'</div>'+(history?'<div class="rpt-history">'+history+'</div>':'')+action+'</article>';
+   return '<article class="rpt-order"><div class="rpt-order-head"><b>'+esc(o.customer_name||'مشتری')+'</b><span class="st">'+esc(ST[o.status]||o.status||'نامشخص')+'</span></div><div class="rpt-meta">کد یکتا: <b dir="ltr">'+esc(o.tracking_code||'ثبت نشده')+'</b></div><div class="rpt-meta">'+esc(o.phone||'')+' · '+dt(o.created_at)+'</div><div class="rpt-meta">'+esc(o.address||'')+'</div>'+items.map(function(x){return '<div class="rpt-item">• '+esc(x.name)+' × '+f(x.qty)+(x.unit?' '+esc(x.unit):'')+(x.price?' · '+pr(Number(x.qty||0)*Number(x.price||0)):'')+'</div>'}).join('')+'<div class="rpt-total">مبلغ سفارش: '+pr(o.total)+'</div>'+(history?'<div class="rpt-history">'+history+'</div>':'')+action+'<div class="acts"><button type="button" onclick="rptEditOpen('+i+')">✏️ ویرایش گزارش</button><button type="button" onclick="rptArchive('+i+')">🗑️ حذف گزارش</button></div><div id="rptedit_'+i+'" class="ar" style="display:none;margin-top:8px"><b>ویرایش اطلاعات گزارش</b><label class="rpt-label" for="rpt_name_'+i+'">نام مشتری</label><input id="rpt_name_'+i+'" maxlength="120" value="'+esc(o.customer_name||'')+'"><label class="rpt-label" for="rpt_phone_'+i+'">شماره تماس</label><input id="rpt_phone_'+i+'" type="tel" maxlength="30" dir="ltr" value="'+esc(o.phone||'')+'"><label class="rpt-label" for="rpt_address_'+i+'">نشانی</label><textarea id="rpt_address_'+i+'" rows="2" maxlength="500">'+esc(o.address||'')+'</textarea><button type="button" class="btn" onclick="rptSaveEdit('+i+')">ذخیره اصلاحات</button><button type="button" class="btn gh" onclick="rptEditClose('+i+')">انصراف</button><p class="mu">کالاها، مبلغ، وضعیت و سوابق تأیید برای جلوگیری از مغایرت مالی و موجودی در این فرم تغییر نمی‌کنند.</p></div></article';
   }
   function group(title,desc,cls,arr,kind){
    return '<section class="rpt-group '+cls+'"><div class="rpt-group-head"><div><b>'+title+'</b><p>'+desc+'</p></div><strong>'+f(arr.length)+'</strong></div>'+(arr.length?arr.map(function(o){return orderCard(o,kind)}).join(''):'<p class="rpt-empty">در حال حاضر سفارشی در این گروه وجود ندارد.</p>')+'</section>';
@@ -254,6 +254,28 @@ function reportView(){
   h+='<h4 style="margin:6px 0">پرفروش‌ترین کالاها</h4>'+(top.length?top.map(function(k){return '<div class="row"><span>'+esc(k)+'</span><span class="mu">'+f(m[k].q)+' عدد · '+pr(m[k].t)+'</span></div>'}).join(''):'<p class="mu">هنوز فروشی ثبت نشده است.</p>')+'<p class="mu">سفارش‌های لغوشده در خلاصه گزارش محاسبه نمی‌شوند.</p>';
   $('ab').innerHTML=h;
  }).catch(fail)
+}
+function rptEditOpen(i){
+ if(!token||!managerAccess)return;
+ var e=$('rptedit_'+i);if(e){e.style.display='block';e.scrollIntoView({behavior:'smooth',block:'nearest'})}
+}
+function rptEditClose(i){var e=$('rptedit_'+i);if(e)e.style.display='none'}
+function rptSaveEdit(i){
+ if(!token||!managerAccess||!O[i])return;
+ var name=val('rpt_name_'+i).trim(),phone=val('rpt_phone_'+i).trim(),address=val('rpt_address_'+i).trim();
+ if(name.length<1||name.length>120){alert('نام مشتری را درست وارد کنید.');return}
+ if(phone.length<5||phone.length>30){alert('شماره تماس باید بین ۵ تا ۳۰ نویسه باشد.');return}
+ if(address.length<1||address.length>500){alert('نشانی را درست وارد کنید.');return}
+ api('rpc/shop_admin_update_order_report',{method:'POST',body:{p_order_id:O[i].id,p_customer_name:name,p_phone:phone,p_address:address}})
+  .then(function(){alert('گزارش با موفقیت ویرایش شد.');reportView()})
+  .catch(function(e){alert(errMsg(e)||'ویرایش گزارش انجام نشد. دسترسی مدیر و اتصال را بررسی کنید.')});
+}
+function rptArchive(i){
+ if(!token||!managerAccess||!O[i])return;
+ if(!confirm('این گزارش از فهرست گزارش‌ها و سفارش‌های فعال حذف شود؟\nاطلاعات اصلی سفارش و سوابق مالی و تحویل برای بایگانی محفوظ می‌ماند.'))return;
+ api('rpc/shop_admin_archive_order_report',{method:'POST',body:{p_order_id:O[i].id}})
+  .then(function(){alert('گزارش از فهرست فعال حذف و برای بایگانی محفوظ شد.');if(tab==='orders')ordersView();else reportView()})
+  .catch(function(e){alert(errMsg(e)||'حذف گزارش انجام نشد. دسترسی مدیر و اتصال را بررسی کنید.')});
 }
 function productsView(){var h='<button class="btn gh" onclick="padd()">＋ کالای جدید</button>';
  P.forEach(function(x,i){h+='<div class="ar"><div class="row" style="border:0">'+(x.image_url?'<img class="thumb" src="'+esc(x.image_url)+'" alt="">':'<span style="font-size:34px">'+esc(x.emoji)+'</span>')+'<div style="flex:1"><input type="file" accept="image/*" onchange="upImg('+i+',this)" style="margin:0"><div id="pm'+i+'" class="mu"></div></div></div><div class="g" style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><input id="pn'+i+'" value="'+esc(x.name)+'" placeholder="نام"><input id="pc'+i+'" value="'+esc(x.category)+'" placeholder="دسته"><input id="pp'+i+'" type="number" value="'+x.price+'" placeholder="قیمت (تومان)"><input id="pu'+i+'" value="'+esc(x.unit)+'" placeholder="واحد"><input id="pe'+i+'" value="'+esc(x.emoji)+'" placeholder="ایموجی"><select id="ps'+i+'"><option value="1"'+(x.in_stock?' selected':'')+'>موجود</option><option value="0"'+(x.in_stock?'':' selected')+'>ناموجود</option></select></div>'+
@@ -333,7 +355,7 @@ function docOrder(i){if(!token)return;var o=O[i];
  '<table><tr><td>تأیید دریافت کالا توسط مشتری</td><td>'+(o.customer_confirmed_at?'✔ '+dt(o.customer_confirmed_at):'ثبت نشده')+'</td></tr><tr><td>تحویل نهایی و تأیید مدیر (با کد یکتای سفارش)</td><td>'+(o.delivered_at?'✔ '+dt(o.delivered_at):'ثبت نشده')+'</td></tr></table>'+
  '<div style="display:flex;justify-content:space-between;margin-top:36px"><div>امضای مشتری: ____________</div><div>امضا و مهر مدیر: ____________</div></div>'+docFoot())}
 function docFinal(){if(!token)return;
- api('shop_orders?select=*&status=eq.done&order=delivered_at.desc.nullslast&limit=1000').then(function(d){d=d||[];
+ api('shop_orders?select=*&status=eq.done&report_archived_at=is.null&order=delivered_at.desc.nullslast&limit=1000').then(function(d){d=d||[];
   var sum=d.reduce(function(a,o){return a+Number(o.total)},0),cc=d.filter(function(o){return o.customer_confirmed_at}).length;
   var rows=d.map(function(o,n){return '<tr><td>'+f(n+1)+'</td><td dir="ltr">'+esc(o.tracking_code||'')+'</td><td>'+esc(o.customer_name)+'</td><td>'+esc(o.phone)+'</td><td>'+pr(o.total)+'</td><td>'+(o.customer_confirmed_at?'✔':'—')+'</td><td>'+dt(o.delivered_at)+'</td></tr>'}).join('');
   printDoc(docHead('گزارش نهایی تحویل‌ها (بایگانی)')+
