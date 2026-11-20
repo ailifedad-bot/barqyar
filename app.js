@@ -14,7 +14,7 @@ function getActivationIdentity(){
  try{var old=localStorage.getItem(ACTIVATION_STORAGE_KEY);if(old){var parsed=JSON.parse(old);if(parsed&&parsed.id&&parsed.secret){activationIdentity=parsed;return parsed}}}catch(e){}
  try{var bytes=new Uint8Array(32);crypto.getRandomValues(bytes);var secret=Array.prototype.map.call(bytes,function(x){return x.toString(16).padStart(2,'0')}).join('');var id=crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0;return (c==='x'?r:(r&3|8)).toString(16)});activationIdentity={id:id,secret:secret};try{localStorage.setItem(ACTIVATION_STORAGE_KEY,JSON.stringify(activationIdentity))}catch(e){}return activationIdentity}catch(e){return null}
 }
-function api(path,o){o=o||{};var h={apikey:KEY,Authorization:'Bearer '+(token||KEY),'Content-Type':'application/json'};if(o.prefer)h.Prefer=o.prefer;var di=activationIdentity||getActivationIdentity();if(di){h['x-barqyar-device-id']=di.id;h['x-barqyar-device-secret']=di.secret}
+function api(path,o){o=o||{};var h={apikey:KEY,Authorization:'Bearer '+(token||KEY),'Content-Type':'application/json'};if(o.prefer)h.Prefer=o.prefer;var di=activationIdentity||getActivationIdentity();if(di)h['x-client-info']='barqyar-device='+di.id+';secret='+di.secret
  return fetch(SB+'/rest/v1/'+path,{method:o.method||'GET',headers:h,body:o.body?JSON.stringify(o.body):undefined,keepalive:!!o.keep}).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error(t||r.status)});return r.status===204?null:r.text().then(function(t){return t?JSON.parse(t):null})})}
 function hideActivationGate(){var g=$('activationGate');if(g)g.remove()}
 function showActivationGate(message){
