@@ -48,7 +48,6 @@ function initActivation(){
   return false;
  }).then(function(isAdmin){
   if(isAdmin)return;
-  if(localStorage.getItem('barqyar_admin_owner_hint')==='1'){openAdmin();return}
   activationUnlocked=true;
   return api('shop_products?select=id,name,category,unit,price,emoji,in_stock,image_url,stock_qty&order=id')
    .then(function(d){P=Array.isArray(d)?d:[];draw();startProductRealtime()})
@@ -141,7 +140,7 @@ function login(){
   if(result.error||!result.data||!result.data.session)return loginView('ایمیل یا رمز عبور اشتباه است.');
   token=result.data.session.access_token;
   return api('rpc/shop_is_admin').then(function(ok){
-   if(ok===true){managerAccess=true;try{localStorage.setItem('barqyar_admin_owner_hint','1')}catch(e){}hideActivationGate();adminView()}
+   if(ok===true){managerAccess=true;hideActivationGate();adminView()}
    else{token=null;managerAccess=false;return adminAuthClient.auth.signOut().then(function(){loginView('این حساب در فهرست مدیران مجاز برق‌یار نیست.')})}
   });
  }).catch(function(){token=null;managerAccess=false;loginView('تأیید ورود مدیر انجام نشد. اتصال را بررسی و دوباره تلاش کنید.')});
@@ -149,8 +148,6 @@ function login(){
 function logout(){
  adminAuthClient.auth.signOut().finally(function(){
   token=null;managerAccess=false;closeSh();
-  // مدیر اصلی پس از خروج، مستقیماً فرم ورود مدیر را می‌بیند؛ کاربران عادی بدون کد به استفاده رایگان ادامه می‌دهند.
-  if(localStorage.getItem('barqyar_admin_owner_hint')==='1'){openAdmin();return}
   activationUnlocked=true;load();startProductRealtime();
  });
 }
@@ -268,7 +265,7 @@ function setAdminTab(t){tab=t;adminView()}
 function adminView(){if(!token||!managerAccess){loginView('برای ورود مدیر لازم است.');return}$('in').innerHTML='<div class="row"><h3>مدیریت</h3><button class="link" onclick="logout()">خروج</button></div><div class="tabs"><button class="chip" onclick="setAdminTab(&quot;orders&quot;)">سفارش‌ها</button><button class="chip" onclick="setAdminTab(&quot;products&quot;)">کالاها</button><button class="chip" onclick="setAdminTab(&quot;master&quot;)">جدول مادر</button><button class="chip" onclick="setAdminTab(&quot;customers&quot;)">مشتریان</button><button class="chip" onclick="setAdminTab(&quot;report&quot;)">گزارش سفارش‌ها</button><button class="chip" onclick="setAdminTab(&quot;feedback&quot;)">بازخورد کاربران</button><button class="chip" onclick="setAdminTab(&quot;activation&quot;)">کدهای فعال‌سازی</button></div>'+(tab==='report'?'<button class="btn dl" onclick="docFinal()">📄 گزارش نهایی بایگانی</button>':'')+'<div id="ab"></div>';tab==='report'?reportView():tab==='orders'?ordersView():tab==='products'?productsView():tab==='master'?masterView():tab==='activation'?activationAdminView():tab==='feedback'?feedbackView():customersView();if(tab!=='activation')startPoll()}
 function feedbackView(){
  var box=$('ab');if(!box)return;box.innerHTML='<p class="mu">در حال دریافت بازخورد کاربران…</p>';
- api('shop_app_feedback?select=*&order=created_at.desc&limit=250').then(function(rows){
+ api('shop_app_feedback?select=id,rating,feedback_type,message,contact_name,contact_phone,order_code,app_version,status,admin_note,created_at&order=created_at.desc&limit=250').then(function(rows){
   AF=rows||[];var rated=AF.filter(function(x){return x.rating!==null&&x.rating!==undefined}),avg=rated.length? rated.reduce(function(s,x){return s+Number(x.rating)},0)/rated.length:0;
   var pending=AF.filter(function(x){return x.status==='new'}).length;
   var h='<div class="g2"><div class="ar"><small>تعداد بازخوردها</small><br><b>'+f(AF.length)+'</b></div><div class="ar"><small>میانگین امتیاز برنامه</small><br><b>'+(rated.length?avg.toFixed(2)+' / 5':'—')+'</b></div></div><p class="mu">در انتظار بررسی: '+f(pending)+' · این امتیازها برای شناسایی نقاط ضعف و بهبود نسخه‌های بعدی استفاده می‌شوند.</p>';
