@@ -11,11 +11,8 @@ self.addEventListener('fetch',function(e){
  if(r.method!=='GET'||u.origin!==self.location.origin)return;
  e.respondWith(caches.open(CACHE).then(function(c){
   return c.match(r).then(function(cached){
-   var update=fetch(r).then(function(res){
-    if(res&&res.ok)c.put(r,res.clone());
-    return res;
-   }).catch(function(){return cached||c.match('index.html')});
-   return cached||update;
+   if(cached)return cached;
+   return fetch(r).then(function(res){if(res&&res.ok)c.put(r,res.clone());return res});
   });
- }));
+ }).catch(function(){return caches.match(r).then(function(m){return m||caches.match('index.html')})}));
 });
