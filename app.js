@@ -265,7 +265,7 @@ function doTrack(){
   }else if(o.status==='cancelled'){
    action='<div class="rpt-warning">این سفارش لغو شده است. برای راهنمایی با مدیریت تماس بگیرید.</div>';
   }
-  $('tr').innerHTML='<div class="ar"><b>وضعیت: '+esc(status)+'</b><div class="mu">تاریخ ثبت: '+dt(o.created_at)+'</div><div class="mu">مبلغ سفارش: '+pr(o.total)+'</div><div class="mu">کد پیگیری: <b dir="ltr">'+esc(o.tracking_code||c)+'</b></div>'+(o.delivered_at?'<div class="mu">زمان ثبت تکمیل سفارش: '+dt(o.delivered_at)+'</div>':'')+action+'</div>';
+  $('tr').innerHTML='<div class="ar"><b>وضعیت: '+esc(status)+'</b><div class="mu">تاریخ ثبت: '+dt(o.created_at)+'</div><div class="mu">مبلغ سفارش: '+pr(o.total)+'</div><div class="mu">کد پیگیری: <b dir="ltr">'+esc(o.tracking_code||c)+'</b></div>' +action+'</div>';
  })
  .catch(function(e){$('tr').innerHTML='<p class="err">خطا در دریافت وضعیت سفارش: '+esc(errMsg(e)||'اتصال برقرار نشد')+'</p>'});
 }
