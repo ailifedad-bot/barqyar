@@ -17,8 +17,7 @@ function getActivationIdentity(){
  try{var old=localStorage.getItem(ACTIVATION_STORAGE_KEY);if(old){var parsed=JSON.parse(old);if(parsed&&parsed.id&&parsed.secret){activationIdentity=parsed;return parsed}}}catch(e){}
  try{var bytes=new Uint8Array(32);crypto.getRandomValues(bytes);var secret=Array.prototype.map.call(bytes,function(x){return x.toString(16).padStart(2,'0')}).join('');var id=crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0;return (c==='x'?r:(r&3|8)).toString(16)});activationIdentity={id:id,secret:secret};try{localStorage.setItem(ACTIVATION_STORAGE_KEY,JSON.stringify(activationIdentity))}catch(e){}return activationIdentity}catch(e){return null}
 }
-function api(path,o){o=o||{};var h={apikey:KEY,Authorization:'Bearer '+(token||KEY),'Content-Type':'application/json'};if(o.prefer)h.Prefer=o.prefer;var di=activationIdentity||getActivationIdentity();if(di)h['x-client-info']='barqyar-device='+di.id+';secret='+di.secret
- return fetch(SB+'/rest/v1/'+path,{method:o.method||'GET',headers:h,body:o.body?JSON.stringify(o.body):undefined,keepalive:!!o.keep}).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error(t||r.status)});return r.status===204?null:r.text().then(function(t){return t?JSON.parse(t):null})})}
+function api(path,o){o=o||{};var h={apikey:KEY,Authorization:'Bearer '+(token||KEY),'Content-Type':'application/json'};if(o.prefer)h.Prefer=o.prefer;return fetch(SB+'/rest/v1/'+path,{method:o.method||'GET',headers:h,body:o.body?JSON.stringify(o.body):undefined,keepalive:!!o.keep}).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error(t||r.status)});return r.status===204?null:r.text().then(function(t){return t?JSON.parse(t):null})})}
 function hideActivationGate(){var g=$('activationGate');if(g)g.remove()}
 function showActivationGate(message){
  var g=$('activationGate');if(!g){g=document.createElement('div');g.id='activationGate';g.className='activation-gate';document.body.appendChild(g)}
@@ -26,18 +25,16 @@ function showActivationGate(message){
 }
 function activationAdminLogin(){hideActivationGate();openAdmin()}
 function submitActivation(){
- var code=val('activationCode').trim().toUpperCase(),di=activationIdentity||getActivationIdentity(),m=$('activationMessage');
+ var code=val('activationCode').trim().toUpperCase(),di=getActivationIdentity(),m=$('activationMessage');
  if(!di){if(m)m.textContent='ذخیره شناسه دستگاه ممکن نیست. حافظه مرورگر را بررسی کنید.';return}
  if(!code){if(m)m.textContent='کد فعال‌سازی را وارد کنید.';return}
  if(m)m.textContent='در حال بررسی کد…';
  api('rpc/shop_redeem_activation',{method:'POST',body:{p_code:code,p_device_id:di.id,p_device_secret:di.secret}})
- .then(function(r){if(!r||r.ok!==true)throw new Error('فعال‌سازی تأیید نشد');activationUnlocked=true;hideActivationGate();alert('برنامه برق‌یار با موفقیت فعال شد.');load();startProductRealtime()})
+ .then(function(r){if(!r||r.ok!==true)throw new Error('فعال‌سازی تأیید نشد');activationUnlocked=true;hideActivationGate();if(m)m.textContent='کد اشتراک با موفقیت ثبت شد. استفاده عادی از برنامه همچنان رایگان است.';load();startProductRealtime()})
  .catch(function(e){if(m)m.textContent=errMsg(e)||'کد معتبر نیست، منقضی شده یا قبلاً استفاده شده است.'})
 }
 function initActivation(){
- activationIdentity=getActivationIdentity();
- if(!activationIdentity){showActivationGate('امکان ایجاد شناسه دستگاه وجود ندارد.');return}
- // ابتدا نشست ذخیره‌شده مدیر را بازیابی و مجوز واقعی مدیر را از Supabase بررسی کن.
+ // استفاده معمولی از برق‌یار رایگان است؛ کد اشتراک فقط در صورت تمایل کاربر ثبت می‌شود.
  adminAuthClient.auth.getSession().then(function(result){
   var session=result&&result.data&&result.data.session;
   if(session&&session.access_token){
@@ -51,23 +48,11 @@ function initActivation(){
   return false;
  }).then(function(isAdmin){
   if(isAdmin)return;
-  // اگر این مرورگر قبلاً برای مدیر اصلی استفاده شده، صفحه ورود مدیر را نشان بده؛ نه فرم کد کاربران.
   if(localStorage.getItem('barqyar_admin_owner_hint')==='1'){openAdmin();return}
-  // بررسی مجوز دستگاه و دریافت کالاها هم‌زمان انجام می‌شود تا دو رفت‌وبرگشت شبکه پشت سر هم نباشد.
-  return Promise.all([
-   api('rpc/shop_check_activation',{method:'POST',body:{p_device_id:activationIdentity.id,p_device_secret:activationIdentity.secret}}),
-   api('shop_products?select=id,name,category,unit,price,emoji,in_stock,image_url,stock_qty&order=id')
-  ]).then(function(results){
-   if(results[0]===true){
-    activationUnlocked=true;
-    P=Array.isArray(results[1])?results[1]:[];
-    draw();
-    startProductRealtime();
-   }else showActivationGate();
-  })
- }).catch(function(){
-  if(localStorage.getItem('barqyar_admin_owner_hint')==='1')openAdmin();
-  else showActivationGate('بررسی فعال‌سازی انجام نشد. اتصال اینترنت را بررسی کنید و دوباره تلاش کنید.');
+  activationUnlocked=true;
+  return api('shop_products?select=id,name,category,unit,price,emoji,in_stock,image_url,stock_qty&order=id')
+   .then(function(d){P=Array.isArray(d)?d:[];draw();startProductRealtime()})
+   .catch(function(e){console.warn('Product loading failed:',e);if($('grid'))$('grid').innerHTML='<p class="err" style="grid-column:1/-1;text-align:center">دریافت کالاها ناموفق بود. اتصال اینترنت را بررسی کنید و دوباره تلاش کنید.</p>'});
  });
 }
 function load(){refreshProducts()}
@@ -131,6 +116,16 @@ function cartView(){
  '<input type="hidden" name="name" id="f_n"><input type="hidden" name="phone" id="f_p"><input type="hidden" name="address" id="f_a"><input type="hidden" name="order" id="f_o">'+
  '<button class="btn gh" type="submit">ایمیل</button></form><button class="btn gh" type="button" onclick="cancelCart()">انصراف از سبد خرید</button>';
 }
+function openSubscription(){
+ show('subscription');
+ $('in').innerHTML='<h3 style="margin:0 0 6px">اشتراک اختیاری برق‌یار</h3><p class="mu">استفاده عادی از برنامه رایگان است. اگر مایل به تهیه اشتراک یا حمایت از توسعه برق‌یار هستید، مدت موردنظر را انتخاب و درخواست خود را ارسال کنید.</p><label>مدت اشتراک درخواستی</label><select id="subDays"><option value="30">یک‌ماهه (۳۰ روز)</option><option value="90">سه‌ماهه (۹۰ روز)</option><option value="180">شش‌ماهه (۱۸۰ روز)</option><option value="365">یکساله (۳۶۵ روز)</option></select><input id="subName" placeholder="نام شما (اختیاری)"><input id="subPhone" type="tel" inputmode="tel" dir="ltr" placeholder="شماره تماس (اختیاری)"><a class="btn wa" href="#" target="_blank" rel="noopener" onclick="return sendSubscriptionRequest(this)">ارسال درخواست اشتراک در واتس‌اپ</a><div class="cfbox"><b>کد اشتراک دریافت کرده‌اید؟</b><p class="mu">کد را فقط در صورت دریافت از مدیر وارد کنید. واردکردن کد برای استفاده معمولی از برنامه لازم نیست.</p><input id="activationCode" dir="ltr" autocomplete="one-time-code" placeholder="کد اشتراک دریافتی"><p id="activationMessage" class="activation-message mu">کد اشتراک اختیاری است.</p><button class="btn gh" type="button" onclick="submitActivation()">ثبت کد اشتراک</button></div><button class="btn gh" onclick="closeSh()">ادامه استفاده رایگان از برق‌یار</button>';
+}
+function sendSubscriptionRequest(el){
+ var days=Number(val('subDays'))||30,name=val('subName').trim(),phone=toEn(val('subPhone').trim());
+ var duration=days===30?'یک‌ماهه':days===90?'سه‌ماهه':days===180?'شش‌ماهه':'یکساله';
+ var message='سلام، می‌خواهم اشتراک اختیاری برنامه برق‌یار را داشته باشم.\nمدت درخواستی: '+duration+' ('+days+' روز)\nنام: '+(name||'ثبت نشده')+'\nشماره تماس: '+(phone||'ثبت نشده')+'\nلطفاً شرایط و روش پرداخت را اعلام کنید.';
+ el.href='https://wa.me/'+WA+'?text='+encodeURIComponent(message);return true;
+}
 function openContact(){show('contact');
  $('in').innerHTML='<h3 style="margin:0 0 6px">تماس با ما</h3><a class="btn gh" href="tel:09366428816">📞 تماس تلفنی: ۰۹۳۶۶۴۲۸۸۱۶</a><a class="btn wa" target="_blank" rel="noopener" href="https://wa.me/'+WA+'">واتس‌اپ</a><a class="btn tg" target="_blank" rel="noopener" href="https://t.me/'+TG+'">تلگرام (@'+TG+')</a>'+
  '<h4 style="margin:16px 0 6px">ارسال پیام</h4><form method="POST" action="https://formsubmit.co/'+MAIL+'" target="_blank">'+
@@ -156,9 +151,7 @@ function logout(){
   token=null;managerAccess=false;closeSh();
   // مدیر اصلی پس از خروج، مستقیماً فرم ورود مدیر را می‌بیند؛ کاربران عادی همچنان کد فعال‌سازی لازم دارند.
   if(localStorage.getItem('barqyar_admin_owner_hint')==='1'){openAdmin();return}
-  api('rpc/shop_check_activation',{method:'POST',body:{p_device_id:activationIdentity.id,p_device_secret:activationIdentity.secret}})
-   .then(function(ok){activationUnlocked=ok===true;if(activationUnlocked){load();startProductRealtime()}else showActivationGate()})
-   .catch(function(){activationUnlocked=false;showActivationGate('برای ادامه استفاده، وضعیت فعال‌سازی دستگاه بررسی نشد. اتصال اینترنت را بررسی کنید.')});
+  activationUnlocked=true;load();startProductRealtime();
  });
 }
 function fail(e){$('ab').innerHTML='<p class="err">دسترسی ندارید یا خطایی رخ داد. با ایمیل مدیر وارد شوید.</p>'}
