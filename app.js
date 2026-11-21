@@ -2,7 +2,7 @@ var SB='https://zgswoheckqasqoclhodg.supabase.co',KEY='sb_publishable_Gs5TQ0bdmh
 var WA='989366428816',TG='makekzir',MAIL='makealmatykz@gmail.com',APP_URL='https://ailifedad-bot.github.io/barqyar/';
 function returnAppUrl(c){return APP_URL+(c?'?track='+encodeURIComponent(c):'')+'#home'}
 var P=[],cat='همه',cart={},saved=false,mode='',token=null,managerAccess=false,tab='orders',O=[],AF=[];
-// Supabase Auth session is stored and refreshed by the official client, so an authorized manager stays signed in after reload.
+// مدیر با ایمیل و رمز عبور وارد می‌شود؛ نشست فقط در حافظه همین صفحه می‌ماند و پس از بارگذاری مجدد دوباره ورود لازم است.
 var adminAuthClient=window.supabase.createClient(SB,KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
 adminAuthClient.auth.onAuthStateChange(function(event,session){token=session&&session.access_token?session.access_token:null;if(event==='SIGNED_OUT'){managerAccess=false}});
 function $(i){return document.getElementById(i)}
@@ -350,7 +350,7 @@ function startPriceScan(){
 }
 function priceCandidateApprove(i){
  if(!token||!managerAccess||!PRICE_CANDIDATES[i])return;
- var x=PRICE_CANDIDATES[i],raw=val('priceFinal_'+i).trim(),price=Number(raw);
+ var x=PRICE_CANDIDATES[i],raw=val('priceFinal_'+i).trim(),price=Number(toEn(raw));
  if(raw===''||!Number.isFinite(price)||price<=0){alert('قیمت نهایی معتبر و بیشتر از صفر وارد کنید.');return}
  if(!confirm('قیمت کالا '+x.product_name+' با کد '+x.product_sku+' به '+pr(price)+' تغییر کند؟'))return;
  api('rpc/shop_admin_review_price_candidate',{method:'POST',body:{p_candidate_id:x.id,p_action:'approve',p_final_price:price}})
