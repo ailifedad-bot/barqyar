@@ -3,7 +3,7 @@ var WA='989366428816',TG='makekzir',MAIL='makealmatykz@gmail.com',APP_URL='https
 function returnAppUrl(c){return APP_URL+(c?'?track='+encodeURIComponent(c):'')+'#home'}
 var P=[],cat='همه',cart={},saved=false,mode='',token=null,managerAccess=false,tab='orders',O=[],AF=[];
 // Supabase Auth session is stored and refreshed by the official client, so an authorized manager stays signed in after reload.
-var adminAuthClient=window.supabase.createClient(SB,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+var adminAuthClient=window.supabase.createClient(SB,KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
 adminAuthClient.auth.onAuthStateChange(function(event,session){token=session&&session.access_token?session.access_token:null;if(event==='SIGNED_OUT'){managerAccess=false}});
 function $(i){return document.getElementById(i)}
 function f(n){return Number(n||0).toLocaleString('fa-IR')}
@@ -249,16 +249,18 @@ function doTrack(){var c=val('tc').trim().toUpperCase();if(!c)return;$('tr').inn
 /* ---------- بازخورد و امتیاز کاربران ---------- */
 function openFeedback(){
  show('feedback');
- $('in').innerHTML='<h3 style="margin:0 0 6px">نظر و امتیاز شما درباره برق‌یار</h3><p class="mu">بازخورد شما به ما کمک می‌کند ایرادها را پیدا کنیم و استفاده از برنامه را ساده‌تر کنیم. ثبت نظر اختیاری است.</p><form id="feedbackForm" onsubmit="submitAppFeedback();return false"><label>امتیاز شما (اختیاری)</label><select id="fbRating"><option value="">بدون امتیاز</option><option value="5">۵ - عالی</option><option value="4">۴ - خوب</option><option value="3">۳ - متوسط</option><option value="2">۲ - ضعیف</option><option value="1">۱ - خیلی ضعیف</option></select><label>موضوع پیام</label><select id="fbType"><option value="general">نظر کلی</option><option value="bug">گزارش خطا یا مشکل</option><option value="usability">سختی استفاده از برنامه</option><option value="order">مشکل ثبت یا پیگیری سفارش</option><option value="product">مشکل کالا یا قیمت</option><option value="suggestion">پیشنهاد برای بهبود</option><option value="other">سایر موارد</option></select><label>شرح نظر یا مشکل</label><textarea id="fbMessage" rows="4" maxlength="2000" placeholder="لطفاً مشکل یا پیشنهاد خود را واضح بنویسید…"></textarea><label>نام (اختیاری)</label><input id="fbName" maxlength="120" placeholder="نام شما"><label>شماره تماس (اختیاری)</label><input id="fbPhone" type="tel" inputmode="tel" maxlength="30" placeholder="فقط در صورت تمایل برای پیگیری"><label>کد سفارش (در صورت مرتبط بودن)</label><input id="fbOrder" maxlength="80" dir="ltr" placeholder="کد پیگیری سفارش"><button class="btn" type="submit">ارسال بازخورد</button><p id="fbResult" class="mu" role="status"></p></form>';
+ $('in').innerHTML='<h3 style="margin:0 0 6px">نظر و امتیاز شما درباره برق‌یار</h3><p class="mu">بازخورد شما به ما کمک می‌کند ایرادها را پیدا کنیم و استفاده از برنامه را ساده‌تر کنیم. ثبت نظر اختیاری است.</p><form id="feedbackForm" onsubmit="submitAppFeedback();return false"><label>امتیاز شما (اختیاری)</label><select id="fbRating"><option value="">بدون امتیاز</option><option value="5">۵ - عالی</option><option value="4">۴ - خوب</option><option value="3">۳ - متوسط</option><option value="2">۲ - ضعیف</option><option value="1">۱ - خیلی ضعیف</option></select><label>موضوع پیام</label><select id="fbType"><option value="general">نظر کلی</option><option value="bug">گزارش خطا یا مشکل</option><option value="usability">سختی استفاده از برنامه</option><option value="order">مشکل ثبت یا پیگیری سفارش</option><option value="product">مشکل کالا یا قیمت</option><option value="suggestion">پیشنهاد برای بهبود</option><option value="other">سایر موارد</option></select><label>شرح نظر یا مشکل</label><textarea id="fbMessage" rows="4" maxlength="2000" placeholder="لطفاً مشکل یا پیشنهاد خود را واضح بنویسید…"></textarea><div aria-hidden="true" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden"><label>این قسمت را خالی بگذارید<input id="fbWebsite" tabindex="-1" autocomplete="off"></label></div><label>نام (اختیاری)</label><input id="fbName" maxlength="120" placeholder="نام شما"><label>شماره تماس (اختیاری)</label><input id="fbPhone" type="tel" inputmode="tel" maxlength="30" placeholder="فقط در صورت تمایل برای پیگیری"><label>کد سفارش (در صورت مرتبط بودن)</label><input id="fbOrder" maxlength="80" dir="ltr" placeholder="کد پیگیری سفارش"><button class="btn" type="submit">ارسال بازخورد</button><p id="fbResult" class="mu" role="status"></p></form>';
 }
 function submitAppFeedback(){
  var rating=val('fbRating')?Number(val('fbRating')):null,message=val('fbMessage').trim();
  if(!rating&&!message){$('fbResult').className='err';$('fbResult').textContent='لطفاً امتیاز بدهید یا شرحی از نظر و مشکل خود بنویسید.';return}
  var payload={rating:rating,feedback_type:val('fbType')||'general',message:message,contact_name:val('fbName').trim()||null,contact_phone:toEn(val('fbPhone').trim())||null,order_code:val('fbOrder').trim()||null,app_version:'1.0.0',status:'new'};
  $('fbResult').className='mu';$('fbResult').textContent='در حال ارسال…';
- api('shop_app_feedback',{method:'POST',prefer:'return=minimal',body:payload})
+ payload.website=val('fbWebsite');
+ fetch(SB+'/functions/v1/submit-app-feedback',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json'},body:JSON.stringify(payload)})
+ .then(function(r){return r.json().catch(function(){return {}}).then(function(d){if(!r.ok){var e=new Error(d.error||'feedback_not_saved');e.status=r.status;throw e}return d})})
  .then(function(){$('fbResult').className='okc';$('fbResult').textContent='سپاسگزاریم؛ بازخورد شما با موفقیت ثبت شد.';$('feedbackForm').reset()})
- .catch(function(e){$('fbResult').className='err';$('fbResult').textContent='ارسال انجام نشد. اتصال اینترنت را بررسی کنید و دوباره تلاش کنید. '+(errMsg(e)||'')});
+ .catch(function(e){$('fbResult').className='err';$('fbResult').textContent=e.status===429?'تعداد ارسال‌های شما در یک ساعت اخیر به حد مجاز رسیده است. لطفاً بعداً دوباره تلاش کنید.':'ارسال انجام نشد. اتصال اینترنت را بررسی کنید و دوباره تلاش کنید. '+(e.message||'')});
 }
 
 /* مدیر */
