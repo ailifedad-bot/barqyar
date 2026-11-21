@@ -298,7 +298,74 @@ function submitAppFeedback(){
 
 /* مدیر */
 function setAdminTab(t){tab=t;adminView()}
-function adminView(){if(!token||!managerAccess){loginView('برای ورود مدیر لازم است.');return}$('in').innerHTML='<div class="row"><h3>مدیریت</h3><button class="link" onclick="logout()">خروج</button></div><div class="tabs"><button class="chip" onclick="setAdminTab(&quot;orders&quot;)">سفارش‌ها</button><button class="chip" onclick="setAdminTab(&quot;products&quot;)">کالاها</button><button class="chip" onclick="setAdminTab(&quot;master&quot;)">جدول مادر</button><button class="chip" onclick="setAdminTab(&quot;customers&quot;)">مشتریان</button><button class="chip" onclick="setAdminTab(&quot;report&quot;)">گزارش سفارش‌ها</button><button class="chip" onclick="setAdminTab(&quot;feedback&quot;)">بازخورد کاربران</button><button class="chip" onclick="setAdminTab(&quot;activation&quot;)">کدهای فعال‌سازی</button></div>'+(tab==='report'?'<button class="btn dl" onclick="docFinal()">📄 گزارش نهایی بایگانی</button>':'')+'<div id="ab"></div>';tab==='report'?reportView():tab==='orders'?ordersView():tab==='products'?productsView():tab==='master'?masterView():tab==='activation'?activationAdminView():tab==='feedback'?feedbackView():customersView();if(tab!=='activation')startPoll()}
+
+var PRICE_CANDIDATES=[],PRICE_RUNS=[];
+function pricesView(){
+ $('ab').innerHTML='<section class="price-panel"><div class="price-panel-head"><div><b>بررسی قیمت روز بازار</b><p>قیمت‌ها از منابع عمده‌فروشی و فروشگاه‌های اینترنتی جمع‌آوری می‌شوند. هیچ قیمتی خودکار تغییر نمی‌کند؛ ثبت قیمت نهایی فقط با تأیید مدیر انجام می‌شود.</p></div><span class="price-mark">تومان</span></div><button class="btn" id="priceScanButton" onclick="startPriceScan()">🔎 جمع‌آوری قیمت کالاها از منابع بازار</button><div id="priceScanStatus" class="price-status" role="status"></div></section><section class="price-panel"><div class="row"><b>پیشنهادهای در انتظار بررسی مدیر</b><button class="link" onclick="pricesRefresh()">↻ تازه‌سازی</button></div><div id="priceCandidates"><p class="mu">در حال دریافت اطلاعات…</p></div></section><section class="price-panel"><b>سوابق آخرین جمع‌آوری قیمت</b><div id="priceRuns"><p class="mu">در حال دریافت…</p></div></section>';
+ pricesRefresh();
+}
+function pricesRefresh(){
+ if(!token||!managerAccess)return;
+ Promise.all([
+  api('shop_price_candidates?select=*&status=eq.pending&order=created_at.desc&limit=500'),
+  api('shop_price_update_runs?select=*&order=created_at.desc&limit=10')
+ ]).then(function(res){
+  PRICE_CANDIDATES=res[0]||[];PRICE_RUNS=res[1]||[];
+  renderPriceCandidates();renderPriceRuns();
+ }).catch(function(e){if($('priceCandidates'))$('priceCandidates').innerHTML='<p class="err">'+esc(errMsg(e)||'دریافت پیشنهادهای قیمت ناموفق بود.')+'</p>'});
+}
+function renderPriceCandidates(){
+ var el=$('priceCandidates');if(!el)return;
+ if(!PRICE_CANDIDATES.length){el.innerHTML='<p class="price-empty">پیشنهاد تأییدنشده‌ای وجود ندارد. برای شروع، جمع‌آوری قیمت بازار را اجرا کنید.</p>';return}
+ el.innerHTML=PRICE_CANDIDATES.map(function(x,i){
+  var src=Array.isArray(x.sources)?x.sources:[],verified=x.match_status==='verified'&&Number(x.match_confidence)>=0.7&&x.unit_match===true&&src.length>0;
+  var statusLabel={verified:'تطبیق تأییدشده',partial:'تطبیق ناقص',ambiguous:'نیازمند بررسی بیشتر',not_found:'قیمت معتبر پیدا نشد'}[x.match_status]||'نامشخص';
+  var sourceHtml=src.length?'<ul class="price-source-list">'+src.map(function(s){
+   var url=String(s.url||''),link=/^https:\/\//i.test(url)?'<a href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">'+esc(s.title||url)+'</a>':esc(s.title||'منبع');
+   return '<li>'+link+' <span class="price-source-type">'+(s.source_type==='wholesale'?'عمده‌فروشی':s.source_type==='retail'?'خرده‌فروشی':'سایر')+'</span><div class="mu">قیمت: '+(s.price==null?'درج نشده':pr(s.price))+' · واحد: '+esc(s.unit||x.unit)+' · تاریخ مشاهده: '+esc(s.observed_at||'نامشخص')+'</div>'+(s.notes?'<div class="mu">'+esc(s.notes)+'</div>':'')+'</li>'
+  }).join('')+'</ul>':'<p class="price-empty">منبع دارای قیمت قابل استناد برای این کالا ثبت نشده است.</p>';
+  return '<article class="price-candidate"><div class="price-candidate-title"><div><b>'+esc(x.product_name)+'</b><small>کد کالا: <strong dir="ltr">'+esc(x.product_sku)+'</strong> · واحد فروش: '+esc(x.unit)+'</small></div><span class="price-confidence">'+Math.round(Number(x.match_confidence||0)*100)+'٪</span></div><div class="price-values"><div><small>قیمت فعلی</small><b>'+pr(x.current_price)+'</b></div><div><small>عمده‌فروشی</small><b>'+(x.wholesale_price==null?'—':pr(x.wholesale_price))+'</b></div><div><small>خرده‌فروشی</small><b>'+(x.retail_price==null?'—':pr(x.retail_price))+'</b></div><div><small>پیشنهاد هوشمند</small><b>'+(x.suggested_price==null?'—':pr(x.suggested_price))+'</b></div></div><div class="price-match '+(verified?'good':'warn')+'">'+esc(statusLabel)+(x.unit_match?' · واحد منطبق':' · واحد نامنطبق')+'</div>'+(x.notes?'<p class="price-notes">'+esc(x.notes)+'</p>':'')+'<details class="price-sources"><summary>مشاهده منابع قیمت ('+f(src.length)+')</summary>'+sourceHtml+'</details><div class="price-review"><label for="priceFinal_'+i+'">قیمت نهایی مورد تأیید مدیر (تومان)</label><input id="priceFinal_'+i+'" type="number" min="1" step="1" placeholder="قیمت را دستی وارد کنید" '+(x.suggested_price?'value="'+Number(x.suggested_price)+'"':'')+'><button class="btn" '+(verified?'':'disabled')+' onclick="priceCandidateApprove('+i+')">✓ تأیید و ثبت قیمت در جدول مادر</button><button class="btn gh" onclick="priceCandidateReject('+i+')">رد این پیشنهاد</button>'+(verified?'':'<p class="price-warning">این پیشنهاد شرایط تأیید خودکار در سامانه را ندارد؛ آن را رد کنید یا قیمت را از مسیر جدول مادر به‌صورت دستی و مستقل اصلاح کنید.</p>')+'</div></article>'
+ }).join('');
+}
+function renderPriceRuns(){
+ var el=$('priceRuns');if(!el)return;
+ if(!PRICE_RUNS.length){el.innerHTML='<p class="price-empty">هنوز جمع‌آوری قیمتی اجرا نشده است.</p>';return}
+ el.innerHTML=PRICE_RUNS.map(function(r){
+  var label=r.status==='completed'?'تکمیل‌شده':r.status==='running'?'در حال اجرا':r.status==='failed'?'ناموفق':r.status;
+  var cl=r.status==='completed'?'good':r.status==='failed'?'warn':'';
+  return '<div class="price-run"><b>'+esc(label)+'</b><span>'+(r.trigger_type==='manual'?'اجرای دستی مدیر':'اجرای زمان‌بندی‌شده')+'</span><small>کالاها: '+f(r.product_count)+' · پیشنهادها: '+f(r.candidate_count)+' · شروع: '+dt(r.started_at)+'</small>'+(r.error_message?'<small class="err">'+esc(r.error_message)+'</small>':'')+'</div>'
+ }).join('');
+}
+function startPriceScan(){
+ if(!token||!managerAccess){alert('ابتدا با حساب مدیر وارد شوید.');return}
+ var b=$('priceScanButton'),s=$('priceScanStatus');if(b)b.disabled=true;if(s){s.className='price-status';s.textContent='در حال جستجوی قیمت‌ها در منابع بازار؛ ممکن است چند دقیقه طول بکشد…'}
+ fetch(SB+'/functions/v1/barqyar-price-update',{
+  method:'POST',
+  headers:{apikey:KEY,Authorization:'Bearer '+token,'Content-Type':'application/json'},
+  body:JSON.stringify({})
+ }).then(function(r){return r.text().then(function(t){var d={};try{d=t?JSON.parse(t):{}}catch(e){d={error:t}}if(!r.ok||d.ok!==true)throw new Error(d.error||'جمع‌آوری قیمت انجام نشد');return d})})
+ .then(function(d){if(s){s.className='price-status good';s.textContent='جمع‌آوری پایان یافت. '+f(d.products_scanned||0)+' کالا بررسی شد و '+f(d.candidates_saved||0)+' پیشنهاد ذخیره شد. قیمت‌ها هنوز تغییر نکرده‌اند.'}pricesRefresh()})
+ .catch(function(e){if(s){s.className='price-status warn';s.textContent='جمع‌آوری ناموفق بود: '+(errMsg(e)||'تنظیم OPENAI_API_KEY در Secrets سوپابیس و دسترسی مدیر را بررسی کنید.')}})
+ .finally(function(){if(b)b.disabled=false})
+}
+function priceCandidateApprove(i){
+ if(!token||!managerAccess||!PRICE_CANDIDATES[i])return;
+ var x=PRICE_CANDIDATES[i],raw=val('priceFinal_'+i).trim(),price=Number(raw);
+ if(raw===''||!Number.isFinite(price)||price<=0){alert('قیمت نهایی معتبر و بیشتر از صفر وارد کنید.');return}
+ if(!confirm('قیمت کالا '+x.product_name+' با کد '+x.product_sku+' به '+pr(price)+' تغییر کند؟'))return;
+ api('rpc/shop_admin_review_price_candidate',{method:'POST',body:{p_candidate_id:x.id,p_action:'approve',p_final_price:price}})
+ .then(function(r){if(!r||r.ok!==true)throw new Error('ثبت قیمت تأیید نشد');alert('قیمت جدید در جدول مادر ثبت شد.');pricesRefresh()})
+ .catch(function(e){alert('ثبت قیمت انجام نشد: '+(errMsg(e)||'دسترسی مدیر و شرایط تطبیق منبع را بررسی کنید.'))})
+}
+function priceCandidateReject(i){
+ if(!token||!managerAccess||!PRICE_CANDIDATES[i])return;
+ var x=PRICE_CANDIDATES[i];if(!confirm('پیشنهاد قیمت '+x.product_name+' رد شود؟'))return;
+ api('rpc/shop_admin_review_price_candidate',{method:'POST',body:{p_candidate_id:x.id,p_action:'reject',p_final_price:null}})
+ .then(function(r){if(!r||r.ok!==true)throw new Error('رد پیشنهاد ثبت نشد');pricesRefresh()})
+ .catch(function(e){alert('رد پیشنهاد انجام نشد: '+(errMsg(e)||'اتصال یا دسترسی مدیر را بررسی کنید.'))})
+}
+
+function adminView(){if(!token||!managerAccess){loginView('برای ورود مدیر لازم است.');return}$('in').innerHTML='<div class="row"><h3>مدیریت</h3><button class="link" onclick="logout()">خروج</button></div><div class="tabs"><button class="chip" onclick="setAdminTab(&quot;orders&quot;)">سفارش‌ها</button><button class="chip" onclick="setAdminTab(&quot;products&quot;)">کالاها</button><button class="chip" onclick="setAdminTab(&quot;master&quot;)">جدول مادر</button><button class="chip" onclick="setAdminTab(&quot;customers&quot;)">مشتریان</button><button class="chip" onclick="setAdminTab(&quot;report&quot;)">گزارش سفارش‌ها</button><button class="chip" onclick="setAdminTab(&quot;feedback&quot;)">بازخورد کاربران</button><button class="chip" onclick="setAdminTab(&quot;prices&quot;)">قیمت بازار</button><button class="chip" onclick="setAdminTab(&quot;activation&quot;)">کدهای فعال‌سازی</button></div>'+(tab==='report'?'<button class="btn dl" onclick="docFinal()">📄 گزارش نهایی بایگانی</button>':'')+'<div id="ab"></div>';tab==='report'?reportView():tab==='orders'?ordersView():tab==='products'?productsView():tab==='master'?masterView():tab==='activation'?activationAdminView():tab==='feedback'?feedbackView():tab==='prices'?pricesView():customersView();if(tab!=='activation')startPoll()}
 function feedbackView(){
  var box=$('ab');if(!box)return;box.innerHTML='<p class="mu">در حال دریافت بازخورد کاربران…</p>';
  api('shop_app_feedback?select=id,rating,feedback_type,message,status,admin_note,summary,archived_at,created_at&order=created_at.desc&limit=250').then(function(rows){
