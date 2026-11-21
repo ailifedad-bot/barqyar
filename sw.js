@@ -1,4 +1,4 @@
-var CACHE='barqyar-v41-free-optional-sub-20261121';
+var CACHE='barqyar-v42-feedback-release-20261121';
 var SHELL=['./','index.html','manifest.json','app.js','privacy.html','icon-192.png','icon-512.png'];
 self.addEventListener('install',function(e){
  e.waitUntil(caches.open(CACHE).then(function(c){return c.addAll(SHELL)}).then(function(){return self.skipWaiting()}));
