@@ -143,6 +143,7 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 @page{margin:14mm}
 @media print{body.pr>*:not(#pa){display:none!important}body.pr{background:#fff;padding:0}body.pr #pa{display:block;color:#000;background:#fff;font-size:13px;line-height:1.8}#pa table{width:100%;border-collapse:collapse}#pa th,#pa td{border:1px solid #777;padding:5px 7px;text-align:right}#pa th{background:#eee}}
 
+.subscription-panel{margin:12px 14px;padding:15px;border:1px solid var(--bd);border-radius:16px;background:var(--card)}.subscription-panel h2{font-size:16px;margin:0 0 6px}.subscription-panel p{font-size:12px;line-height:1.9;color:var(--mu);margin:0 0 10px}.subscription-panel .btn{margin-top:8px}
 .activation-gate{position:fixed;inset:0;z-index:9999;background:rgba(12,18,28,.94);display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto}
 .activation-card{width:100%;max-width:440px;background:var(--card);color:var(--tx);border:2px solid var(--ac);border-radius:20px;padding:22px;box-shadow:0 18px 60px rgba(0,0,0,.35);text-align:center}
 .activation-logo{font-size:25px;font-weight:800;color:var(--ac2)}
@@ -166,11 +167,12 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 </header>
 <div class="chips" id="chips"></div>
 <div class="grid" id="grid"><p class="mu" style="grid-column:1/-1;text-align:center">در حال بارگذاری…</p></div>
+<section class="subscription-panel"><h2>اشتراک اختیاری برق‌یار</h2><p>استفاده معمولی از برنامه رایگان است. اگر مایل هستید اشتراک داشته باشید، می‌توانید مدت موردنظر را انتخاب و درخواست خود را برای مدیر ارسال کنید.</p><button class="btn gh" type="button" onclick="openSubscription()">می‌خواهم اشتراک برنامه را داشته باشم</button></section>
 <footer class="mu" style="text-align:center;padding:24px 14px"><a href="privacy.html" style="color:var(--ac2)">حریم خصوصی</a> · <a href="tel:09366428816" style="color:var(--ac2)">۰۹۳۶۶۴۲۸۸۱۶</a></footer>
 <div class="bar h" id="bar" onclick="openCart()"><span id="bn"></span><b id="bt"></b></div>
 <div class="sheet" id="sh" onclick="if(event.target===this)closeSh()"><div class="in" id="in"></div></div>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2"></script>
-<script defer src="app.js?v=barqyar-fastload-v5-20261121"></script>
+<script defer src="app.js?v=barqyar-free-optional-sub-v1-20261121"></script>
 
 <script>
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
