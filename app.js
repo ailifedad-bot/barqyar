@@ -53,15 +53,37 @@ function initActivation(){
   if(isAdmin)return;
   // اگر این مرورگر قبلاً برای مدیر اصلی استفاده شده، صفحه ورود مدیر را نشان بده؛ نه فرم کد کاربران.
   if(localStorage.getItem('barqyar_admin_owner_hint')==='1'){openAdmin();return}
-  return api('rpc/shop_check_activation',{method:'POST',body:{p_device_id:activationIdentity.id,p_device_secret:activationIdentity.secret}})
-   .then(function(ok){if(ok===true){activationUnlocked=true;load();startProductRealtime()}else showActivationGate()})
+  // بررسی مجوز دستگاه و دریافت کالاها هم‌زمان انجام می‌شود تا دو رفت‌وبرگشت شبکه پشت سر هم نباشد.
+  return Promise.all([
+   api('rpc/shop_check_activation',{method:'POST',body:{p_device_id:activationIdentity.id,p_device_secret:activationIdentity.secret}}),
+   api('shop_products?select=id,name,category,unit,price,emoji,in_stock,image_url,stock_qty&order=id')
+  ]).then(function(results){
+   if(results[0]===true){
+    activationUnlocked=true;
+    P=Array.isArray(results[1])?results[1]:[];
+    draw();
+    startProductRealtime();
+   }else showActivationGate();
+  })
  }).catch(function(){
   if(localStorage.getItem('barqyar_admin_owner_hint')==='1')openAdmin();
   else showActivationGate('بررسی فعال‌سازی انجام نشد. اتصال اینترنت را بررسی کنید و دوباره تلاش کنید.');
  });
 }
 function load(){refreshProducts()}
-function refreshProducts(){if(managerAccess)return;api('shop_products?select=*&order=id').then(function(d){P=d||[];draw();if(mode==='cart')cartView()}).catch(function(){if(!$('grid').innerHTML||$('grid').innerHTML.indexOf('در حال بارگذاری')>-1)$('grid').innerHTML='<p class="err" style="grid-column:1/-1;text-align:center">بارگذاری کالاها ناموفق بود. صفحه را دوباره باز کنید.</p>'})}
+function refreshProducts(){
+ if(managerAccess||!activationUnlocked)return;
+ api('shop_products?select=id,name,category,unit,price,emoji,in_stock,image_url,stock_qty&order=id')
+ .then(function(d){
+  P=Array.isArray(d)?d:[];
+  draw();
+  if(mode==='cart')cartView();
+ }).catch(function(e){
+  console.warn('Product loading failed:',e);
+  if(!$('grid').innerHTML||$('grid').innerHTML.indexOf('در حال بارگذاری')>-1||$('grid').innerHTML.indexOf('دریافت نشد')>-1)
+   $('grid').innerHTML='<p class="err" style="grid-column:1/-1;text-align:center">دریافت کالاها ناموفق بود. اتصال اینترنت یا دسترسی دستگاه را بررسی کنید.</p>';
+ });
+}
 var productChannel=null,productRealtimeClient=null;
 function startProductRealtime(){
  if(productChannel||!window.supabase||!window.supabase.createClient)return;
@@ -72,8 +94,8 @@ function startProductRealtime(){
    .subscribe(function(status){if(status==='SUBSCRIBED')console.log('Barqyar live product updates connected')});
  }catch(e){console.warn('Realtime connection unavailable',e)}
 }
-document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')refreshProducts()});
-window.addEventListener('online',function(){refreshProducts()});
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&activationUnlocked)refreshProducts()});
+window.addEventListener('online',function(){if(activationUnlocked)refreshProducts()});
 function cats(){return ['همه'].concat(P.map(function(x){return x.category}).filter(function(v,i,a){return v&&a.indexOf(v)===i}))}
 function chg(id,d){cart[id]=Math.max(0,(cart[id]||0)+d);if(!cart[id])delete cart[id];saved=false;draw();if(mode==='cart')cartView()}
 function show(m){mode=m;$('sh').className='sheet o'}
@@ -213,7 +235,8 @@ function draw(){
  Array.prototype.forEach.call($('chips').children,function(b,i){b.onclick=function(){cat=cs[i];draw()}});
  var q=$('q').value.trim();
  var l=P.filter(function(x){return (cat==='همه'||x.category===cat)&&(!q||x.name.indexOf(q)>-1||x.category.indexOf(q)>-1)});
- $('grid').innerHTML=l.length?l.map(function(x){
+ if(!P.length){$('grid').innerHTML='<p class="err" style="grid-column:1/-1;text-align:center">فهرست کالاها از سرور دریافت نشد. اتصال اینترنت و فعال‌بودن دستگاه را بررسی کنید.</p>'}
+ else $('grid').innerHTML=l.length?l.map(function(x){
   var n=cart[x.id]||0,b;
   if(!x.in_stock)b='<button class="btn gh" disabled>ناموجود</button>';
   else if(n)b='<div class="qty"><button onclick="chg('+x.id+',1)">+</button><b>'+f(n)+'</b><button onclick="chg('+x.id+',-1)">−</button></div>';
@@ -427,13 +450,20 @@ function printDoc(h){if(!token)return;var d=document.createElement('div');d.id='
  window.addEventListener('afterprint',done);setTimeout(function(){window.print()},200)}
 function docHead(t){return '<div style="text-align:center;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:12px"><h1 style="margin:0;font-size:22px">⚡ برق‌یار</h1><div style="font-size:16px;font-weight:700">'+t+'</div><div>تلفن: <span dir="ltr">'+PHONE+'</span></div></div>'}
 function docFoot(){return '<div style="margin-top:18px;font-size:11px;border-top:1px solid #888;padding-top:6px">'+esc(CRT)+'<br>تاریخ صدور سند: '+dt(Date.now())+'</div>'}
+var html2pdfLoader=null;
+function ensureHtml2Pdf(){
+ if(window.html2pdf)return Promise.resolve();
+ if(html2pdfLoader)return html2pdfLoader;
+ html2pdfLoader=new Promise(function(resolve,reject){var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js';s.onload=resolve;s.onerror=function(){html2pdfLoader=null;reject(new Error('کتابخانه PDF بارگذاری نشد'))};document.head.appendChild(s)});
+ return html2pdfLoader;
+}
 function docOrder(i){
  if(!token||!managerAccess||!O[i])return;var o=O[i],items=Array.isArray(o.items)?o.items:[];
  var rows=items.map(function(x,n){return '<tr><td>'+f(n+1)+'</td><td>'+esc(x.name)+'</td><td>'+esc(x.unit||'')+'</td><td>'+f(x.qty)+'</td><td>'+pr(x.price)+'</td><td>'+pr(Number(x.price||0)*Number(x.qty||0))+'</td></tr>'}).join('');
  var report='<div id="orderPdfSource" dir="rtl" style="width:100%;max-width:780px;margin:12px auto;padding:18px;background:#fff;color:#111;font-family:Vazirmatn,Tahoma,sans-serif;font-size:13px;line-height:1.9;border:1px solid #ddd">'+docHead('گزارش سفارش کالا')+'<table style="width:100%;border-collapse:collapse"><tr><td>کد سفارش</td><td dir="ltr"><b>'+esc(o.tracking_code||'')+'</b></td><td>تاریخ ثبت</td><td>'+dt(o.created_at)+'</td></tr><tr><td>وضعیت</td><td>'+esc(ST[o.status]||o.status||'')+'</td><td>مبلغ کل</td><td><b>'+pr(o.total)+'</b></td></tr><tr><td>نام مشتری</td><td>'+esc(o.customer_name||'')+'</td><td>شماره تماس</td><td dir="ltr">'+esc(o.phone||'')+'</td></tr><tr><td>کد اشتراک</td><td dir="ltr">'+esc(o.subscription_code||'—')+'</td><td>نشانی</td><td>'+esc(o.address||'')+'</td></tr></table><br><table style="width:100%;border-collapse:collapse"><tr><th>ردیف</th><th>نام کالا</th><th>واحد</th><th>تعداد</th><th>قیمت واحد</th><th>مبلغ ردیف</th></tr>'+rows+'<tr><td colspan="5"><b>جمع کل سفارش</b></td><td><b>'+pr(o.total)+'</b></td></tr></table>'+docFoot()+'</div>';
  $('in').innerHTML='<div class="row"><b>گزارش سفارش (PDF)</b><button class="link" onclick="closeSh()">بستن</button></div><p class="mu">گزارش سفارش فقط در پنل مدیر نمایش داده می‌شود.</p><div id="orderPdfFrame" style="width:100%;height:65vh;min-height:360px;background:#eee;border:1px solid var(--bd);border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center">در حال ساخت PDF…</div><div id="orderPdfDownload" style="margin-top:8px"></div>'+report;
- var source=$('orderPdfSource');if(!window.html2pdf){$('orderPdfFrame').textContent='کتابخانه PDF بارگذاری نشده است؛ از چاپ برای ذخیره PDF استفاده کنید.';$('orderPdfDownload').innerHTML='<button class="btn" onclick="printOrderFallback()">چاپ / ذخیره PDF</button>';return}
- html2pdf().set({margin:8,filename:'barqyar-order-'+String(o.tracking_code||o.id)+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:1.5,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(source).outputPdf('blob').then(function(blob){if(!$('orderPdfFrame'))return;if(orderPdfUrl)URL.revokeObjectURL(orderPdfUrl);orderPdfUrl=URL.createObjectURL(blob);$('orderPdfFrame').innerHTML='<iframe title="گزارش سفارش PDF" src="'+orderPdfUrl+'" style="width:100%;height:100%;border:0;background:#fff"></iframe>';source.style.display='none';$('orderPdfDownload').innerHTML='<a class="btn dl" href="'+orderPdfUrl+'" download="barqyar-order-'+esc(o.tracking_code||o.id)+'.pdf">⬇️ دریافت فایل PDF</a>'}).catch(function(e){console.error('PDF error',e);$('orderPdfFrame').textContent='ساخت PDF ناموفق بود؛ نسخه چاپی را به PDF ذخیره کنید.';$('orderPdfDownload').innerHTML='<button class="btn" onclick="printOrderFallback()">چاپ / ذخیره PDF</button>'})
+ var source=$('orderPdfSource');$('orderPdfFrame').textContent='در حال آماده‌سازی فایل PDF…';
+ ensureHtml2Pdf().then(function(){if(!$('orderPdfFrame'))return;return html2pdf().set({margin:8,filename:'barqyar-order-'+String(o.tracking_code||o.id)+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:1.5,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(source).outputPdf('blob').then(function(blob){if(!$('orderPdfFrame'))return;if(orderPdfUrl)URL.revokeObjectURL(orderPdfUrl);orderPdfUrl=URL.createObjectURL(blob);$('orderPdfFrame').innerHTML='<iframe title="گزارش سفارش PDF" src="'+orderPdfUrl+'" style="width:100%;height:100%;border:0;background:#fff"></iframe>';source.style.display='none';$('orderPdfDownload').innerHTML='<a class="btn dl" href="'+orderPdfUrl+'" download="barqyar-order-'+esc(o.tracking_code||o.id)+'.pdf">⬇️ دریافت فایل PDF</a>'}).catch(function(e){console.error('PDF error',e);$('orderPdfFrame').textContent='ساخت PDF ناموفق بود؛ نسخه چاپی را به PDF ذخیره کنید.';$('orderPdfDownload').innerHTML='<button class="btn" onclick="printOrderFallback()">چاپ / ذخیره PDF</button>'})})
 }
 function printOrderFallback(){var s=$('orderPdfSource');if(s)printDoc(s.outerHTML)}
 function docFinal(){if(!token||!managerAccess)return;api('shop_orders?select=*&status=eq.done&report_archived_at=is.null&order=delivered_at.desc.nullslast&limit=1000').then(function(d){d=d||[];var sum=d.reduce(function(a,o){return a+Number(o.total||0)},0);var rows=d.map(function(o,n){return '<tr><td>'+f(n+1)+'</td><td dir="ltr">'+esc(o.tracking_code||'')+'</td><td>'+esc(o.customer_name)+'</td><td>'+esc(o.phone)+'</td><td>'+pr(o.total)+'</td><td>'+dt(o.delivered_at)+'</td></tr>'}).join('');printDoc(docHead('گزارش نهایی سفارش‌های تکمیل‌شده')+'<table><tr><td>تعداد سفارش</td><td>'+f(d.length)+'</td><td>جمع مبلغ</td><td>'+pr(sum)+'</td></tr></table><br><table><tr><th>ردیف</th><th>کد سفارش</th><th>مشتری</th><th>تلفن</th><th>مبلغ</th><th>تاریخ تکمیل</th></tr>'+(rows||'<tr><td colspan="6">سفارشی ثبت نشده است.</td></tr>')+'</table>'+docFoot())}).catch(function(e){alert(errMsg(e)||'دریافت گزارش انجام نشد')})}
