@@ -10,8 +10,8 @@
 <meta name="apple-mobile-web-app-title" content="برق‌یار">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<meta name="description" content="سفارش آسان تجهیزات برق ساختمان؛ سیم، کلید، پریز، روشنایی و تابلو">
-<title>برق‌یار | فروشگاه تجهیزات برق ساختمان</title>
+<meta name="description" content="برق‌یار؛ مرجع سفارش آسان تجهیزات برق ساختمان. انتخاب کالا، ثبت سفارش و پیگیری. نسخه آزمایشی؛ قیمت‌ها واقعی نیستند.">
+<title>برق‌یار | سفارش آسان تجهیزات برق ساختمان</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://zgswoheckqasqoclhodg.supabase.co" crossorigin>
@@ -161,6 +161,33 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 .track-guide{margin:10px 0 14px;padding:13px 14px;border:2px solid #0369a1;border-right:6px solid #0284c7;border-radius:13px;background:linear-gradient(120deg,rgba(14,165,233,.16),rgba(59,130,246,.07));color:#075985;font-size:13px;font-weight:800;line-height:2;box-shadow:0 0 0 0 rgba(14,165,233,.35);animation:trackGlow 2s infinite}
 @keyframes trackGlow{0%,100%{box-shadow:0 0 0 0 rgba(14,165,233,.28)}50%{box-shadow:0 0 0 6px rgba(14,165,233,0)}}
 @media(prefers-reduced-motion:reduce){.track-guide{animation:none}}
+
+/* ---- هویت بصری صفحه معرفی برق‌یار ---- */
+:root{--brand-navy:#102b45;--brand-blue:#0b5f91;--brand-gold:#f6bd45;--brand-ice:#eaf5fc}
+.welcome-wrap{padding:8px 14px 4px}
+.welcome-hero{position:relative;isolation:isolate;overflow:hidden;border-radius:24px;padding:24px 20px 20px;background:radial-gradient(circle at 8% 12%,rgba(89,180,231,.28),transparent 34%),linear-gradient(135deg,#102b45 0%,#123d60 58%,#075985 100%);color:#fff;box-shadow:0 14px 32px rgba(16,43,69,.2)}
+.welcome-hero:before,.welcome-hero:after{content:"";position:absolute;z-index:-1;border:1px solid rgba(255,255,255,.13);border-radius:50%;pointer-events:none}
+.welcome-hero:before{width:210px;height:210px;left:-88px;top:-112px}
+.welcome-hero:after{width:150px;height:150px;left:-42px;top:-82px}
+.welcome-brand{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.welcome-bolt{display:grid;place-items:center;width:48px;height:48px;border-radius:16px;background:linear-gradient(145deg,#ffe29a,#f4b632);color:#17334d;font-size:29px;box-shadow:0 7px 18px rgba(246,189,69,.25)}
+.welcome-brand strong{font-size:25px;letter-spacing:-.5px}
+.welcome-brand small{display:block;color:#c8e3f5;font-size:11px;margin-top:1px}
+.welcome-hero h2{font-size:19px;line-height:1.8;margin:8px 0;color:#fff}
+.welcome-hero p{font-size:13px;line-height:2;color:#e0eff9;margin:6px 0 14px;max-width:680px}
+.welcome-cta{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 18px;border-radius:13px;background:linear-gradient(135deg,#ffe29a,#f6bd45);color:#19344d;text-decoration:none;font-weight:800;font-size:13px;box-shadow:0 6px 16px rgba(0,0,0,.16);transition:transform .2s,filter .2s}
+.welcome-cta:active{transform:scale(.97);filter:brightness(.96)}
+.welcome-features{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:17px}
+.welcome-feature{min-width:0;padding:9px 5px;border:1px solid rgba(255,255,255,.16);border-radius:13px;background:rgba(255,255,255,.09);text-align:center;color:#f2f8fc;font-size:11px;line-height:1.7}
+.welcome-feature b{display:block;font-size:17px;margin-bottom:2px}
+.demo-notice{display:flex;align-items:flex-start;gap:10px;margin:11px 0 5px;padding:12px 13px;border:1px solid #e7b64d;border-right:5px solid #e3a51e;border-radius:15px;background:linear-gradient(115deg,#fff8e7,#fff1cc);color:#70480b;box-shadow:0 5px 14px rgba(180,120,20,.08)}
+.demo-notice .demo-icon{font-size:22px;line-height:1.4}
+.demo-notice b{display:block;font-size:13px;margin-bottom:2px;color:#744700}
+.demo-notice p{font-size:11px;line-height:1.9;margin:0;color:#805719}
+@media(min-width:760px){.welcome-wrap{max-width:1080px;margin:0 auto}.welcome-hero{padding:30px 34px}.welcome-hero h2{font-size:22px}.welcome-hero p{font-size:14px}.welcome-features{max-width:560px}}
+@media(max-width:380px){.welcome-hero{padding:20px 15px}.welcome-hero h2{font-size:17px}.welcome-features{gap:5px}.welcome-feature{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.welcome-cta{transition:none}}
+
 </style>
 </head>
 <body>
@@ -169,6 +196,23 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 <a class="phone" href="tel:09366428816">📞 ۰۹۳۶۶۴۲۸۸۱۶</a>
 <input id="q" placeholder="جستجوی کالا (مثلاً سیم، کلید، لامپ…)" oninput="draw()">
 </header>
+<section class="welcome-wrap" id="barqyarWelcome" aria-label="معرفی برق‌یار">
+ <div class="welcome-hero">
+  <div class="welcome-brand"><span class="welcome-bolt" aria-hidden="true">⚡</span><div><strong>برق‌یار</strong><small>سفارش آسان تجهیزات برق ساختمان</small></div></div>
+  <h2>تجهیزات برق ساختمان را آسان‌تر انتخاب و سفارش دهید.</h2>
+  <p>از سیم و کابل، کلید و پریز تا تجهیزات روشنایی، لوازم حفاظتی و تابلو برق را انتخاب کنید، سفارش خود را ثبت کنید و وضعیت آن را به‌راحتی پیگیری نمایید.</p>
+  <a class="welcome-cta" href="#chips">مشاهده کالاها <span aria-hidden="true">←</span></a>
+  <div class="welcome-features">
+   <div class="welcome-feature"><b>⌕</b>انتخاب و جستجوی کالا</div>
+   <div class="welcome-feature"><b>🛒</b>ثبت آسان سفارش</div>
+   <div class="welcome-feature"><b>✓</b>پیگیری سفارش</div>
+  </div>
+ </div>
+ <div class="demo-notice" role="note" aria-label="اطلاعیه نسخه آزمایشی">
+  <span class="demo-icon" aria-hidden="true">⚠️</span>
+  <div><b>برق‌یار در مرحله آزمایشی است</b><p>قیمت‌های نمایش‌داده‌شده صرفاً آزمایشی هستند و قیمت واقعی فروش محسوب نمی‌شوند. برنامه را امتحان کنید و پیشنهادها و نظرات خود را با ما در میان بگذارید.</p></div>
+ </div>
+</section>
 <div class="chips" id="chips"></div>
 <div class="grid" id="grid"><p class="mu" style="grid-column:1/-1;text-align:center">در حال بارگذاری…</p></div>
 <section class="subscription-panel"><h2>اشتراک اختیاری برق‌یار</h2><p>استفاده معمولی از برنامه رایگان است. اگر مایل هستید اشتراک داشته باشید، می‌توانید مدت موردنظر را انتخاب و درخواست خود را برای مدیر ارسال کنید.</p><button class="btn gh" type="button" onclick="openSubscription()">می‌خواهم اشتراک برنامه را داشته باشم</button></section>
