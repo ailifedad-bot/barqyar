@@ -59,15 +59,15 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 .bdg{background:#dc2626;color:#fff;border-radius:10px;padding:0 6px;font-size:12px;margin-inline-start:4px}
 .phone{display:block;margin:-4px 0 8px;font-size:13px;font-weight:600;color:var(--ac2);text-decoration:none}
 :root{--cf:#16a34a;--dl:#7c3aed}
-.cfbox{border:2px solid var(--cf);background:rgba(22,163,74,.08);border-radius:14px;padding:12px;margin-top:10px}
+
 .cfbtn,.dlbtn,.btn.dl{border:0;border-radius:12px;padding:14px;font:inherit;font-weight:800;font-size:16px;color:#fff!important;cursor:pointer}
-.cfbtn{width:100%;margin-top:6px;background:linear-gradient(135deg,#16a34a,#22c55e);animation:pg 1.6s infinite}
+
 .dlbtn,.btn.dl{background:linear-gradient(135deg,#7c3aed,#a855f7);animation:pp 1.6s infinite}
 .btn.dl{width:100%;margin-bottom:8px}
 .acts .dlbtn{padding:9px 12px;font-size:14px;border-radius:10px}
-@keyframes pg{0%{box-shadow:0 0 0 0 rgba(34,197,94,.55)}70%{box-shadow:0 0 0 14px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+70%{box-shadow:0 0 0 14px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
 @keyframes pp{0%{box-shadow:0 0 0 0 rgba(168,85,247,.55)}70%{box-shadow:0 0 0 14px rgba(168,85,247,0)}100%{box-shadow:0 0 0 0 rgba(168,85,247,0)}}
-.cfok,.dlok{border:2px solid var(--cf);background:rgba(22,163,74,.12);color:var(--cf);border-radius:12px;padding:12px;margin-top:10px;font-weight:700;text-align:center}
+.cfok,
 .dlok{border-color:var(--dl);background:rgba(124,58,237,.12);color:var(--dl)}
 .await{border:2px solid var(--dl);box-shadow:0 0 14px rgba(124,58,237,.35)}
 .tag{display:inline-block;border-radius:10px;padding:2px 8px;font-size:12px;font-weight:700;color:#fff;margin-inline-end:4px}.tag.c{background:var(--cf)}.tag.d{background:var(--dl)}.tag:not(.c):not(.d){background:var(--bd);color:var(--tx)}
@@ -189,46 +189,6 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 @media(prefers-reduced-motion:reduce){.welcome-cta{transition:none}}
 
 
-/* پنل بررسی قیمت بازار؛ تأیید نهایی فقط با مدیر */
-.price-panel{margin:10px 14px;padding:13px;border:1px solid var(--bd);border-radius:16px;background:var(--card)}
-.price-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
-.price-panel-head b{font-size:16px}
-.price-panel p{font-size:12px;line-height:1.9;color:var(--mu);margin:5px 0 10px}
-.price-mark{flex:none;background:#fff7ed;color:#9a3412;border:1px solid #fdba74;border-radius:10px;padding:5px 9px;font-size:11px;font-weight:800}
-.price-status{font-size:12px;line-height:1.8;margin-top:8px;padding:8px;border-radius:10px}
-.price-status.good{background:#dcfce7;color:#166534}
-.price-status.warn{background:#fff7ed;color:#9a3412}
-.price-empty{background:var(--bg);border:1px dashed var(--bd);border-radius:10px;padding:12px;font-size:12px;color:var(--mu);line-height:1.8}
-.price-candidate{border:1px solid var(--bd);border-radius:14px;padding:11px;margin:10px 0;background:var(--bg)}
-.price-candidate-title{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
-.price-candidate-title b{display:block;font-size:14px}
-.price-candidate-title small{display:block;font-size:11px;color:var(--mu);margin-top:4px}
-.price-confidence{flex:none;background:#e0f2fe;color:#075985;border-radius:9px;padding:5px 8px;font-weight:800;font-size:12px}
-.price-values{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:10px 0}
-.price-values>div{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:8px;min-width:0}
-.price-values small,.price-values b{display:block}
-.price-values small{font-size:10px;color:var(--mu)}
-.price-values b{font-size:12px;margin-top:3px;overflow-wrap:anywhere}
-.price-match{font-size:11px;font-weight:800;padding:6px 8px;border-radius:9px}
-.price-match.good{background:#dcfce7;color:#166534}
-.price-match.warn{background:#fff7ed;color:#9a3412}
-.price-notes{font-size:11px;color:var(--mu);line-height:1.8}
-.price-sources{margin:9px 0;background:var(--card);border-radius:10px;padding:9px;font-size:12px}
-.price-sources summary{cursor:pointer;font-weight:800;color:var(--brand-blue)}
-.price-source-list{padding-right:18px;margin:8px 0}
-.price-source-list li{margin:8px 0;line-height:1.8;overflow-wrap:anywhere}
-.price-source-list a{color:var(--brand-blue);font-weight:700}
-.price-source-type{display:inline-block;font-size:10px;background:var(--brand-ice);color:var(--brand-navy);padding:2px 6px;border-radius:6px}
-.price-review{border-top:1px solid var(--bd);margin-top:10px;padding-top:9px}
-.price-review label{display:block;font-size:12px;font-weight:800;margin-bottom:5px}
-.price-review input{margin-bottom:6px}
-.price-review .btn:disabled{opacity:.45;cursor:not-allowed;animation:none}
-.price-warning{font-size:11px;line-height:1.8;color:#92400e;background:#fff7ed;border-radius:8px;padding:7px}
-.price-run{display:flex;flex-wrap:wrap;align-items:center;gap:7px;border-bottom:1px solid var(--bd);padding:9px 0;font-size:12px}
-.price-run b{color:var(--brand-blue)}
-.price-run small{display:block;width:100%;color:var(--mu)}
-.price-run .err{color:#b91c1c}
-
 </style>
 </head>
 <body>
@@ -262,7 +222,7 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 <div class="bar h" id="bar" onclick="openCart()"><span id="bn"></span><b id="bt"></b></div>
 <div class="sheet" id="sh" onclick="if(event.target===this)closeSh()"><div class="in" id="in"></div></div>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2"></script>
-<script defer src="app.js?v=barqyar-market-price-review-v7-20261121"></script>
+<script defer src="app.js?v=barqyar-simple-delivery-v9-20261121"></script>
 
 <script>
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
