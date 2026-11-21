@@ -30,7 +30,7 @@ function submitActivation(){
  if(!code){if(m)m.textContent='کد فعال‌سازی را وارد کنید.';return}
  if(m)m.textContent='در حال بررسی کد…';
  api('rpc/shop_redeem_activation',{method:'POST',body:{p_code:code,p_device_id:di.id,p_device_secret:di.secret}})
- .then(function(r){if(!r||r.ok!==true)throw new Error('فعال‌سازی تأیید نشد');activationUnlocked=true;hideActivationGate();if(m)m.textContent='کد اشتراک با موفقیت ثبت شد. استفاده عادی از برنامه همچنان رایگان است.';load();startProductRealtime()})
+ .then(function(r){if(!r||r.ok!==true)throw new Error('فعال‌سازی تأیید نشد');activationUnlocked=true;hideActivationGate();if(m)m.textContent='کد اشتراک با موفقیت ثبت شد. استفاده عادی از برنامه رایگان است و جزئیات امکانات ویژه طبق طرح اعلامی ارائه می‌شود.';load();startProductRealtime()})
  .catch(function(e){if(m)m.textContent=errMsg(e)||'کد معتبر نیست، منقضی شده یا قبلاً استفاده شده است.'})
 }
 function initActivation(){
@@ -118,7 +118,7 @@ function cartView(){
 }
 function openSubscription(){
  show('subscription');
- $('in').innerHTML='<h3 style="margin:0 0 6px">اشتراک اختیاری برق‌یار</h3><p class="mu">استفاده عادی از برنامه رایگان است. اگر مایل به تهیه اشتراک یا حمایت از توسعه برق‌یار هستید، مدت موردنظر را انتخاب و درخواست خود را ارسال کنید.</p><label>مدت اشتراک درخواستی</label><select id="subDays"><option value="30">یک‌ماهه (۳۰ روز)</option><option value="90">سه‌ماهه (۹۰ روز)</option><option value="180">شش‌ماهه (۱۸۰ روز)</option><option value="365">یکساله (۳۶۵ روز)</option></select><input id="subName" placeholder="نام شما (اختیاری)"><input id="subPhone" type="tel" inputmode="tel" dir="ltr" placeholder="شماره تماس (اختیاری)"><a class="btn wa" href="#" target="_blank" rel="noopener" onclick="return sendSubscriptionRequest(this)">ارسال درخواست اشتراک در واتس‌اپ</a><div class="cfbox"><b>کد اشتراک دریافت کرده‌اید؟</b><p class="mu">کد را فقط در صورت دریافت از مدیر وارد کنید. واردکردن کد برای استفاده معمولی از برنامه لازم نیست.</p><input id="activationCode" dir="ltr" autocomplete="one-time-code" placeholder="کد اشتراک دریافتی"><p id="activationMessage" class="activation-message mu">کد اشتراک اختیاری است.</p><button class="btn gh" type="button" onclick="submitActivation()">ثبت کد اشتراک</button></div><button class="btn gh" onclick="closeSh()">ادامه استفاده رایگان از برق‌یار</button>';
+ $('in').innerHTML='<h3 style="margin:0 0 6px">اشتراک اختیاری برق‌یار</h3><p class="mu">استفاده عادی از برنامه رایگان است. اگر مایل به تهیه اشتراک یا حمایت از توسعه برق‌یار هستید، مدت موردنظر را انتخاب و درخواست خود را ارسال کنید.</p><label>مدت اشتراک درخواستی</label><select id="subDays"><option value="30">یک‌ماهه (۳۰ روز)</option><option value="90">سه‌ماهه (۹۰ روز)</option><option value="180">شش‌ماهه (۱۸۰ روز)</option><option value="365">یکساله (۳۶۵ روز)</option></select><input id="subName" placeholder="نام شما (اختیاری)"><input id="subPhone" type="tel" inputmode="tel" dir="ltr" placeholder="شماره تماس (اختیاری)"><a class="btn wa" href="#" target="_blank" rel="noopener" onclick="return sendSubscriptionRequest(this)">ارسال درخواست اشتراک در واتس‌اپ</a><div class="cfbox"><b>کد اشتراک دریافت کرده‌اید؟</b><p class="mu">کد را فقط در صورت دریافت از مدیر وارد کنید. این کد برای ثبت عضویت اختیاری است؛ استفاده معمولی از برنامه به کد نیاز ندارد.</p><input id="activationCode" dir="ltr" autocomplete="one-time-code" placeholder="کد اشتراک دریافتی"><p id="activationMessage" class="activation-message mu">کد اشتراک اختیاری است.</p><button class="btn gh" type="button" onclick="submitActivation()">ثبت کد اشتراک</button></div><button class="btn gh" onclick="closeSh()">ادامه استفاده رایگان از برق‌یار</button>';
 }
 function sendSubscriptionRequest(el){
  var days=Number(val('subDays'))||30,name=val('subName').trim(),phone=toEn(val('subPhone').trim());
@@ -149,7 +149,7 @@ function login(){
 function logout(){
  adminAuthClient.auth.signOut().finally(function(){
   token=null;managerAccess=false;closeSh();
-  // مدیر اصلی پس از خروج، مستقیماً فرم ورود مدیر را می‌بیند؛ کاربران عادی همچنان کد فعال‌سازی لازم دارند.
+  // مدیر اصلی پس از خروج، مستقیماً فرم ورود مدیر را می‌بیند؛ کاربران عادی بدون کد به استفاده رایگان ادامه می‌دهند.
   if(localStorage.getItem('barqyar_admin_owner_hint')==='1'){openAdmin();return}
   activationUnlocked=true;load();startProductRealtime();
  });
