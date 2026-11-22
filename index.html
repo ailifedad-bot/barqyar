@@ -242,11 +242,11 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 <div class="grid" id="grid"><p class="mu" style="grid-column:1/-1;text-align:center">در حال بارگذاری…</p></div>
 <section class="subscription-panel"><h2>اشتراک اختیاری برق‌یار</h2><p>استفاده معمولی از برنامه رایگان است. اگر مایل هستید اشتراک داشته باشید، می‌توانید مدت موردنظر را انتخاب و درخواست خود را برای مدیر ارسال کنید.</p><button class="btn gh" type="button" onclick="openSubscription()">می‌خواهم اشتراک برنامه را داشته باشم</button></section>
 <section class="subscription-panel"><h2>نظرات و امتیاز کاربران</h2><p>تجربه شما برای بهترشدن برق‌یار مهم است. اگر با خطا یا دشواری روبه‌رو شدید، لطفاً گزارش کنید یا به برنامه امتیاز بدهید.</p><button class="btn gh" type="button" onclick="openFeedback()">ثبت نظر، گزارش مشکل یا امتیاز</button></section>
-<footer class="mu" style="text-align:center;padding:24px 14px"><a href="privacy.html" style="color:var(--ac2)">حریم خصوصی</a> · <a href="tel:09366428816" style="color:var(--ac2)">۰۹۳۶۶۴۲۸۸۱۶</a></footer>
+<footer class="mu" style="text-align:center;padding:24px 14px"><a href="privacy.html" style="color:var(--ac2)">حریم خصوصی</a> · <a href="#" onclick="openTerms();return false" style="color:var(--ac2)">شرایط استفاده</a> · <a href="tel:09366428816" style="color:var(--ac2)">۰۹۳۶۶۴۲۸۸۱۶</a></footer>
 <div class="bar h" id="bar" onclick="openCart()"><span id="bn"></span><b id="bt"></b></div>
 <div class="sheet" id="sh" onclick="if(event.target===this)closeSh()"><div class="in" id="in"></div></div>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2"></script>
-<script defer src="app.js?v=barqyar-admin-price-menu-removed-v14-20261122"></script>
+<script defer src="app.js?v=barqyar-terms-v1-20261122"></script>
 
 <script>
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
