@@ -210,6 +210,9 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 .price-history-empty{padding:13px;border-radius:11px;background:rgba(124,58,237,.07);color:var(--mu);font-size:12px;line-height:1.9}
 .price-delete{color:#b91c1c!important;border-color:#fecaca!important}
 @media(prefers-reduced-motion:reduce){.price-report-create{animation:none}}
+
+.price-report-create:disabled{opacity:.65;cursor:wait}
+.price-history-hero .mu{line-height:1.9;margin-top:10px}
 </style>
 </head>
 <body>
@@ -243,7 +246,7 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 <div class="bar h" id="bar" onclick="openCart()"><span id="bn"></span><b id="bt"></b></div>
 <div class="sheet" id="sh" onclick="if(event.target===this)closeSh()"><div class="in" id="in"></div></div>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2"></script>
-<script defer src="app.js?v=barqyar-price-history-v12-20261122"></script>
+<script defer src="app.js?v=barqyar-price-snapshot-v13-20261122"></script>
 
 <script>
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
