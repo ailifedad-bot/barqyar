@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://ailifedad-bot.github.io/barqyar/sitemap.xml
