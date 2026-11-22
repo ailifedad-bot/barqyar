@@ -86,7 +86,7 @@ function show(m){mode=m;$('sh').className='sheet o'}
 var orderPdfUrl=null;
 function closeSh(){if(orderPdfUrl){URL.revokeObjectURL(orderPdfUrl);orderPdfUrl=null}$('sh').className='sheet';mode=''}
 function lines(){var t=0,n=0,a=[];P.forEach(function(x){var q=cart[x.id];if(!q)return;t+=q*x.price;n+=q;a.push({product_id:x.id,sku:x.sku||'',name:x.name,unit:x.unit,qty:q,price:x.price})});return {a:a,t:t,n:n}}
-function openCart(){show('cart');cartView()}
+function openCart(){show('cart');cartView();refreshProducts()}
 var customerDraftTimer=null,customerDraftPromise=null,customerDraftKey='';
 function saveCustomerDraft(){
  if(customerDraftTimer){clearTimeout(customerDraftTimer);customerDraftTimer=null}
