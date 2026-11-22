@@ -191,6 +191,25 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 
 
 .sku-public{display:block;direction:ltr;text-align:right;color:#075985;font-size:11px;font-weight:800;letter-spacing:.35px;margin:4px 0;padding:3px 7px;border-radius:7px;background:rgba(14,165,233,.09);width:max-content;max-width:100%}
+
+/* ---- پنل اختصاصی تاریخچه قیمت و PDF ---- */
+.price-history-hero{margin:10px 14px 14px;padding:19px;border:1px solid #6d28d9;border-radius:19px;background:radial-gradient(circle at 5% 0%,rgba(255,255,255,.22),transparent 32%),linear-gradient(135deg,#24104d,#5b21b6 58%,#7c3aed);color:#fff;box-shadow:0 12px 28px rgba(91,33,182,.22);position:relative;overflow:hidden}
+.price-history-kicker{font-size:11px;letter-spacing:.4px;color:#e9d5ff;font-weight:800}
+.price-history-hero h3{font-size:18px;margin:7px 0;color:#fff}
+.price-history-hero p{font-size:12px;line-height:1.9;color:#f3e8ff;margin:4px 0 12px}
+.price-history-latest{padding:9px 11px;border:1px solid rgba(255,255,255,.28);border-radius:11px;background:rgba(255,255,255,.12);font-size:12px;line-height:1.9}
+.price-report-create{width:100%;margin-top:12px;border:0;border-radius:12px;padding:13px;background:linear-gradient(135deg,#fde68a,#fbbf24);color:#422006;font:inherit;font-weight:900;box-shadow:0 5px 14px rgba(0,0,0,.18);cursor:pointer;animation:priceGlow 1.8s infinite}
+@keyframes priceGlow{0%,100%{box-shadow:0 0 0 0 rgba(253,230,138,.4)}50%{box-shadow:0 0 0 7px rgba(253,230,138,0)}}
+.price-history-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 14px 12px}
+.price-history-stats>div{padding:12px;border:1px solid #a78bfa;border-radius:13px;background:rgba(124,58,237,.08);text-align:center}
+.price-history-stats small,.price-history-stats b{display:block}.price-history-stats small{font-size:11px;color:var(--mu)}.price-history-stats b{font-size:22px;color:#7c3aed}
+.price-history-row{padding:11px;margin:9px 0;border:1px solid var(--bd);border-right:4px solid #7c3aed;border-radius:12px;background:var(--card)}
+.price-history-date{font-size:11px;color:#7c3aed;font-weight:800}
+.price-history-values{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:12px}
+.price-up{color:#15803d;font-weight:800}.price-down{color:#b91c1c;font-weight:800}
+.price-history-empty{padding:13px;border-radius:11px;background:rgba(124,58,237,.07);color:var(--mu);font-size:12px;line-height:1.9}
+.price-delete{color:#b91c1c!important;border-color:#fecaca!important}
+@media(prefers-reduced-motion:reduce){.price-report-create{animation:none}}
 </style>
 </head>
 <body>
@@ -224,7 +243,7 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 <div class="bar h" id="bar" onclick="openCart()"><span id="bn"></span><b id="bt"></b></div>
 <div class="sheet" id="sh" onclick="if(event.target===this)closeSh()"><div class="in" id="in"></div></div>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2"></script>
-<script defer src="app.js?v=barqyar-price-live-v11-20261122"></script>
+<script defer src="app.js?v=barqyar-price-history-v12-20261122"></script>
 
 <script>
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
