@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="برق‌یار">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<meta name="description" content="برق‌یار؛ مرجع سفارش آسان تجهیزات برق ساختمان. انتخاب کالا، ثبت سفارش و پیگیری. نسخه آزمایشی؛ قیمت‌ها واقعی نیستند.">
+<meta name="description" content="برق‌یار؛ سفارش تجهیزات برق ساختمان با قیمت‌های ثبت‌شده توسط مدیر و امکان پیگیری سفارش. قیمت‌ها ممکن است تغییر کنند.">
 <title>برق‌یار | سفارش آسان تجهیزات برق ساختمان</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -213,7 +213,7 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
  </div>
  <div class="demo-notice" role="note" aria-label="اطلاعیه نسخه آزمایشی">
   <span class="demo-icon" aria-hidden="true">⚠️</span>
-  <div><b>برق‌یار در مرحله آزمایشی است</b><p>قیمت‌های نمایش‌داده‌شده صرفاً آزمایشی هستند و قیمت واقعی فروش محسوب نمی‌شوند. برنامه را امتحان کنید و پیشنهادها و نظرات خود را با ما در میان بگذارید.</p></div>
+  <div><b>قیمت‌های برق‌یار</b><p>قیمت‌های نمایش‌داده‌شده از جدول مادر کالاها در سامانه دریافت و توسط مدیر به‌روزرسانی می‌شوند. قیمت نهایی را پیش از تأیید سفارش بررسی کنید؛ ممکن است با تغییرات بازار عوض شوند.</p></div>
  </div>
 </section>
 <div class="chips" id="chips"></div>
@@ -224,7 +224,7 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 <div class="bar h" id="bar" onclick="openCart()"><span id="bn"></span><b id="bt"></b></div>
 <div class="sheet" id="sh" onclick="if(event.target===this)closeSh()"><div class="in" id="in"></div></div>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2"></script>
-<script defer src="app.js?v=barqyar-sku-v10-20261122"></script>
+<script defer src="app.js?v=barqyar-price-live-v11-20261122"></script>
 
 <script>
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
