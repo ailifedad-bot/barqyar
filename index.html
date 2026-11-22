@@ -189,6 +189,8 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 @media(prefers-reduced-motion:reduce){.welcome-cta{transition:none}}
 
 
+
+.sku-public{display:block;direction:ltr;text-align:right;color:#075985;font-size:11px;font-weight:800;letter-spacing:.35px;margin:4px 0;padding:3px 7px;border-radius:7px;background:rgba(14,165,233,.09);width:max-content;max-width:100%}
 </style>
 </head>
 <body>
@@ -222,7 +224,7 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 <div class="bar h" id="bar" onclick="openCart()"><span id="bn"></span><b id="bt"></b></div>
 <div class="sheet" id="sh" onclick="if(event.target===this)closeSh()"><div class="in" id="in"></div></div>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2"></script>
-<script defer src="app.js?v=barqyar-simple-delivery-v9-20261121"></script>
+<script defer src="app.js?v=barqyar-sku-v10-20261122"></script>
 
 <script>
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
