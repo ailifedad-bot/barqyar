@@ -1,4 +1,4 @@
-var CACHE='barqyar-v53-price-live-20261122';
+var CACHE='barqyar-v54-price-history-20261122';
 var SHELL=['./','index.html','manifest.json','app.js','privacy.html','icon-192.png','icon-512.png'];
 self.addEventListener('install',function(e){
  e.waitUntil(caches.open(CACHE).then(function(c){return c.addAll(SHELL)}).then(function(){return self.skipWaiting()}));
