@@ -214,6 +214,76 @@ function masterSave(code){
  }).catch(function(e){alert('ذخیره انجام نشد. دسترسی مدیر یا اتصال Supabase را بررسی کنید. '+errMsg(e))});
 }
 
+
+/* ---- گزارش تاریخچه تغییر قیمت و فایل‌های PDF مدیر ---- */
+var priceHistoryRows=[],priceReportRows=[],priceReportPreviewUrl=null;
+function priceReportsView(){
+ if(!token||!managerAccess)return;
+ $('ab').innerHTML='<section class="price-history-hero"><div class="price-history-kicker">مدیریت هوشمند قیمت‌ها</div><h3>📊 تاریخچه بروزرسانی قیمت کالاها</h3><p>هر بار که قیمت یک کالا در جدول مادر تغییر کند، تاریخ و مقدار قبل و بعد آن به‌صورت خودکار ثبت می‌شود.</p><div class="price-history-latest" id="priceHistoryLatest">در حال دریافت آخرین تاریخ بروزرسانی…</div><button class="price-report-create" onclick="priceReportGenerate()">✨ تهیه و ذخیره گزارش PDF</button></section><div class="price-history-stats" id="priceHistoryStats"></div><div class="ar"><div class="row"><b>سوابق تغییر قیمت</b><span class="st">تا ۵۰۰ تغییر اخیر</span></div><div id="priceHistoryList" class="mu">در حال دریافت…</div></div><div class="ar"><div class="row"><b>فایل‌های PDF ذخیره‌شده</b><span class="st">بایگانی مدیر</span></div><p class="mu">گزارش‌های ذخیره‌شده در فضای امن برق‌یار نگهداری می‌شوند و مدیر می‌تواند آن‌ها را دریافت، چاپ یا حذف کند.</p><div id="priceReportFiles" class="mu">در حال دریافت…</div></div>';
+ Promise.all([
+  api('shop_price_history?select=*&order=changed_at.desc&limit=500'),
+  api('shop_price_reports?select=*&order=created_at.desc&limit=100')
+ ]).then(function(r){
+  priceHistoryRows=Array.isArray(r[0])?r[0]:[];priceReportRows=Array.isArray(r[1])?r[1]:[];
+  var latest=priceHistoryRows[0],last=$('priceHistoryLatest');
+  if(last)last.innerHTML=latest?'آخرین تغییر قیمت: <b>'+dt(latest.changed_at)+'</b>':'هنوز تغییری پس از فعال‌سازی تاریخچه قیمت ثبت نشده است.';
+  var stats=$('priceHistoryStats');
+  if(stats)stats.innerHTML='<div><small>تعداد تغییرات ثبت‌شده</small><b>'+f(priceHistoryRows.length)+'</b></div><div><small>گزارش‌های PDF ذخیره‌شده</small><b>'+f(priceReportRows.length)+'</b></div>';
+  var list=$('priceHistoryList');
+  if(list)list.innerHTML=priceHistoryRows.length?priceHistoryRows.map(function(x){return '<article class="price-history-row"><div class="row"><b>'+esc(x.product_name)+'</b><span class="price-history-date">'+dt(x.changed_at)+'</span></div><div class="mu">کد کالا: <b dir="ltr">'+esc(x.sku||'—')+'</b> · ثبت‌کننده: '+esc(x.changed_by||'مدیر')+'</div><div class="price-history-values"><span>قبل: <b>'+pr(x.old_price)+'</b></span><span>بعد: <b>'+pr(x.new_price)+'</b></span><span class="'+(Number(x.new_price)>=Number(x.old_price)?'price-up':'price-down')+'">'+(Number(x.new_price)>Number(x.old_price)?'▲ افزایش':Number(x.new_price)<Number(x.old_price)?'▼ کاهش':'بدون تغییر')+'</span></div></article>'}).join(''):'<div class="price-history-empty">هنوز سابقه تغییر قیمت ثبت نشده است. از این پس تغییر قیمت در جدول مادر به‌صورت خودکار ثبت می‌شود.</div>';
+  priceReportFilesView();
+ }).catch(function(e){var l=$('priceHistoryList');if(l)l.innerHTML='<span class="err">دریافت سوابق انجام نشد: '+esc(errMsg(e)||'اتصال یا دسترسی مدیر را بررسی کنید.')+'</span>'});
+}
+function priceReportFilesView(){
+ var box=$('priceReportFiles');if(!box)return;
+ box.innerHTML=priceReportRows.length?priceReportRows.map(function(x){return '<article class="price-history-row price-report-file"><b>📄 '+esc(x.file_name)+'</b><div class="mu">تاریخ ذخیره: '+dt(x.created_at)+' · تعداد تغییر قیمت: '+f(x.rows_count)+'</div><div class="acts"><button onclick="priceReportDownload(\''+esc(x.id)+'\')">⬇ دریافت PDF</button><button onclick="priceReportPrint(\''+esc(x.id)+'\')">🖨 بازکردن برای چاپ</button><button class="price-delete" onclick="priceReportDelete(\''+esc(x.id)+'\')">حذف گزارش</button></div></article>'}).join(''):'<div class="price-history-empty">هنوز فایل PDF ذخیره نشده است. برای ساخت اولین گزارش، دکمه بنفش بالای صفحه را بزنید.</div>';
+}
+function priceReportHtml(rows){
+ var trs=rows.map(function(x,i){return '<tr><td>'+(i+1)+'</td><td dir="ltr">'+esc(x.sku||'—')+'</td><td>'+esc(x.product_name)+'</td><td>'+pr(x.old_price)+'</td><td>'+pr(x.new_price)+'</td><td>'+dt(x.changed_at)+'</td><td>'+esc(x.changed_by||'مدیر')+'</td></tr>'}).join('');
+ return '<div id="priceReportPdfSource" dir="rtl" style="width:100%;padding:18px;background:#fff;color:#152238;font-family:Vazirmatn,Tahoma,sans-serif;font-size:11px;line-height:1.9"><div style="text-align:center;background:#102b45;color:#fff;padding:18px;border-radius:12px"><h1 style="margin:0;font-size:22px">⚡ برق‌یار</h1><h2 style="margin:5px 0;color:#ffe29a">گزارش تاریخچه بروزرسانی قیمت کالاها</h2><div>گزارش مدیریتی · تاریخ تهیه: '+dt(Date.now())+'</div></div><p>تعداد تغییرات ثبت‌شده در این گزارش: <b>'+f(rows.length)+'</b></p><table style="width:100%;border-collapse:collapse"><thead><tr style="background:#eaf5fc"><th>ردیف</th><th>SKU</th><th>نام کالا</th><th>قیمت قبلی</th><th>قیمت جدید</th><th>تاریخ تغییر</th><th>ثبت‌کننده</th></tr></thead><tbody>'+(trs||'<tr><td colspan="7">هنوز تغییر قیمتی ثبت نشده است.</td></tr>')+'</tbody></table><p style="margin-top:18px;border-top:1px solid #ccd5df;padding-top:8px;font-size:10px">این گزارش از سوابق ثبت‌شده در پایگاه داده برق‌یار تهیه شده است. '+esc(CRT)+'</p></div>';
+}
+function priceReportGenerate(){
+ if(!token||!managerAccess)return;
+ var rows=priceHistoryRows.slice(),file='barqyar-price-history-'+new Date().toISOString().replace(/[:.]/g,'-')+'.pdf';
+ if(!rows.length&&!confirm('هنوز هیچ تغییر قیمتی در تاریخچه ثبت نشده است. یک گزارش خالی با وضعیت فعلی تهیه شود؟'))return;
+ ensureHtml2Pdf().then(function(){
+  var host=document.createElement('div');host.style.cssText='position:fixed;left:-10000px;top:0;width:760px;background:#fff;z-index:-1';host.innerHTML=priceReportHtml(rows);document.body.appendChild(host);
+  return html2pdf().set({margin:8,filename:file,image:{type:'jpeg',quality:.96},html2canvas:{scale:1.5,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'landscape'}}).from(host.firstElementChild).outputPdf('blob').then(function(blob){host.remove();return priceReportUpload(blob,file,rows.length)});
+ }).then(function(){alert('گزارش PDF با موفقیت در بایگانی برق‌یار ذخیره شد.');priceReportsView()})
+ .catch(function(e){console.error('Price report PDF:',e);alert('تهیه یا ذخیره PDF انجام نشد: '+(errMsg(e)||e.message||'اتصال و دسترسی مدیر را بررسی کنید.'))});
+}
+function priceReportUpload(blob,file,count){
+ var path='price-reports/'+Date.now()+'-'+file;
+ return fetch(SB+'/storage/v1/object/barqyar-price-reports/'+path,{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+token,'Content-Type':'application/pdf','x-upsert':'false'},body:blob})
+ .then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error(t||'ذخیره فایل PDF انجام نشد')})})
+ .then(function(){return api('shop_price_reports',{method:'POST',prefer:'return=representation',body:{file_name:file,file_path:path,rows_count:count,period_start:priceHistoryRows.length?priceHistoryRows[priceHistoryRows.length-1].changed_at:null,period_end:priceHistoryRows.length?priceHistoryRows[0].changed_at:null,created_by:'مدیر'}})})
+ .catch(function(e){fetch(SB+'/storage/v1/object/barqyar-price-reports/'+path,{method:'DELETE',headers:{apikey:KEY,Authorization:'Bearer '+token}}).catch(function(){});throw e});
+}
+function priceReportGetBlob(id){
+ var x=priceReportRows.filter(function(r){return r.id===id})[0];if(!x)return Promise.reject(new Error('فایل گزارش پیدا نشد'));
+ return fetch(SB+'/storage/v1/object/barqyar-price-reports/'+x.file_path,{headers:{apikey:KEY,Authorization:'Bearer '+token}})
+ .then(function(r){if(!r.ok)throw new Error('دریافت فایل PDF ناموفق بود');return r.blob()});
+}
+function priceReportDownload(id){
+ if(!token||!managerAccess)return;
+ priceReportGetBlob(id).then(function(blob){var url=URL.createObjectURL(blob),x=priceReportRows.filter(function(r){return r.id===id})[0],a=document.createElement('a');a.href=url;a.download=x.file_name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},60000)})
+ .catch(function(e){alert(errMsg(e)||e.message||'دریافت فایل انجام نشد')});
+}
+function priceReportPrint(id){
+ if(!token||!managerAccess)return;
+ priceReportGetBlob(id).then(function(blob){var url=URL.createObjectURL(blob),w=window.open(url,'_blank');if(!w){URL.revokeObjectURL(url);alert('مرورگر پنجره چاپ را مسدود کرد. دریافت PDF را بزنید و از نمایشگر PDF چاپ کنید.');return}setTimeout(function(){try{w.focus()}catch(e){}},700);setTimeout(function(){URL.revokeObjectURL(url)},120000)})
+ .catch(function(e){alert(errMsg(e)||e.message||'بازکردن PDF انجام نشد')});
+}
+function priceReportDelete(id){
+ if(!token||!managerAccess)return;
+ var x=priceReportRows.filter(function(r){return r.id===id})[0];if(!x)return;
+ if(!confirm('فایل PDF «'+x.file_name+'» و سابقه بایگانی آن حذف شود؟ این کار برگشت‌پذیر نیست.'))return;
+ fetch(SB+'/storage/v1/object/barqyar-price-reports/'+x.file_path,{method:'DELETE',headers:{apikey:KEY,Authorization:'Bearer '+token}})
+ .then(function(r){if(!r.ok)throw new Error('حذف فایل از فضای ذخیره‌سازی ناموفق بود');return api('shop_price_reports?id=eq.'+encodeURIComponent(id),{method:'DELETE'})})
+ .then(function(){priceReportRows=priceReportRows.filter(function(r){return r.id!==id});priceReportFilesView();alert('فایل PDF حذف شد.')})
+ .catch(function(e){alert(errMsg(e)||e.message||'حذف گزارش انجام نشد')});
+}
+
 /* ---- بهبودها: عکس کالا، کد پیگیری، گزارش، اعلان ---- */
 var productPollT=null;
 var ST={shipping:'در انتظار تأیید مدیر',approved:'تأییدشده؛ در انتظار تحویل',done:'تکمیل‌شده',cancelled:'لغوشده'};
@@ -290,7 +360,7 @@ function submitAppFeedback(){
 /* مدیر */
 function setAdminTab(t){tab=t;adminView()}
 
-function adminView(){if(!token||!managerAccess){loginView('برای ورود مدیر لازم است.');return}$('in').innerHTML='<div class="row"><h3>مدیریت</h3><button class="link" onclick="logout()">خروج</button></div><div class="tabs"><button class="chip" onclick="setAdminTab(&quot;orders&quot;)">سفارش‌ها</button><button class="chip" onclick="setAdminTab(&quot;products&quot;)">کالاها</button><button class="chip" onclick="setAdminTab(&quot;master&quot;)">جدول مادر</button><button class="chip" onclick="setAdminTab(&quot;customers&quot;)">مشتریان</button><button class="chip" onclick="setAdminTab(&quot;report&quot;)">گزارش سفارش‌ها</button><button class="chip" onclick="setAdminTab(&quot;feedback&quot;)">بازخورد کاربران</button><button class="chip" onclick="setAdminTab(&quot;activation&quot;)">کدهای فعال‌سازی</button></div>'+(tab==='report'?'<button class="btn dl" onclick="docFinal()">📄 گزارش نهایی بایگانی</button>':'')+'<div id="ab"></div>';tab==='report'?reportView():tab==='orders'?ordersView():tab==='products'?productsView():tab==='master'?masterView():tab==='activation'?activationAdminView():tab==='feedback'?feedbackView():customersView();if(tab!=='activation')startPoll()}
+function adminView(){if(!token||!managerAccess){loginView('برای ورود مدیر لازم است.');return}$('in').innerHTML='<div class="row"><h3>مدیریت</h3><button class="link" onclick="logout()">خروج</button></div><div class="tabs"><button class="chip" onclick="setAdminTab(&quot;orders&quot;)">سفارش‌ها</button><button class="chip" onclick="setAdminTab(&quot;products&quot;)">کالاها</button><button class="chip" onclick="setAdminTab(&quot;master&quot;)">جدول مادر</button><button class="chip" onclick="setAdminTab(&quot;customers&quot;)">مشتریان</button><button class="chip" onclick="setAdminTab(&quot;report&quot;)">گزارش سفارش‌ها</button><button class="chip" onclick="setAdminTab(&quot;pricehistory&quot;)">📈 تاریخچه قیمت و PDF</button><button class="chip" onclick="setAdminTab(&quot;feedback&quot;)">بازخورد کاربران</button><button class="chip" onclick="setAdminTab(&quot;activation&quot;)">کدهای فعال‌سازی</button></div>'+(tab==='report'?'<button class="btn dl" onclick="docFinal()">📄 گزارش نهایی بایگانی</button>':'')+'<div id="ab"></div>';tab==='report'?reportView():tab==='pricehistory'?priceReportsView():tab==='orders'?ordersView():tab==='products'?productsView():tab==='master'?masterView():tab==='activation'?activationAdminView():tab==='feedback'?feedbackView():customersView();if(tab!=='activation')startPoll()}
 function feedbackView(){
  var box=$('ab');if(!box)return;box.innerHTML='<p class="mu">در حال دریافت بازخورد کاربران…</p>';
  api('shop_app_feedback?select=id,rating,feedback_type,message,status,admin_note,summary,archived_at,created_at&order=created_at.desc&limit=250').then(function(rows){
