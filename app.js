@@ -398,7 +398,7 @@ function activationAdminView(){
 function activationCreateCode(){
  var days=Number(val('activationDays'))||30;
  api('rpc/shop_admin_create_activation_code',{method:'POST',body:{p_expires_days:days}})
- .then(function(r){if(!r||!r.code)throw new Error('کد ایجاد نشد');$('activationNewCode').innerHTML='<div class="activation-new"><b>کد جدید؛ فقط همین یک‌بار نمایش داده می‌شود:</b><div class="activation-code" dir="ltr">'+esc(r.code)+'</div><button class="btn gh" onclick="activationCopyCode(\''+esc(r.code)+'\')">کپی کد</button><p class="mu">مهلت استفاده: '+dt(r.expires_at)+'</p><p class="mu">این کد را برای یک کاربر ارسال کنید. پس از استفاده، دیگر قابل استفاده نیست.</p></div>';activationRefresh()})
+ .then(function(r){if(!r||!r.code)throw new Error('کد ایجاد نشد');$('activationNewCode').innerHTML='<div class="activation-new"><b>کد جدید؛ فقط همین یک‌بار نمایش داده می‌شود:</b><div class="activation-code" dir="ltr">'+esc(r.code)+'</div><button class="btn gh" onclick="activationCopyCode(\''+esc(r.code)+'\')">کپی کد</button><p class="mu">آخرین مهلت ثبت کد: '+dt(r.expires_at)+'</p><p class="mu">این کد را برای یک کاربر ارسال کنید. پس از استفاده، دیگر قابل استفاده نیست.</p></div>';activationRefresh()})
  .catch(function(e){alert(errMsg(e)||'ساخت کد ناموفق بود؛ ورود مدیر را بررسی کنید.')})
 }
 function activationCopyCode(code){try{navigator.clipboard.writeText(code).then(function(){alert('کد کپی شد')}).catch(function(){alert('کد را به‌صورت دستی انتخاب و کپی کنید: '+code)})}catch(e){alert('کد را به‌صورت دستی انتخاب و کپی کنید: '+code)}}
