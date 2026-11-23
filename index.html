@@ -144,19 +144,6 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 @media print{body.pr>*:not(#pa){display:none!important}body.pr{background:#fff;padding:0}body.pr #pa{display:block;color:#000;background:#fff;font-size:13px;line-height:1.8}#pa table{width:100%;border-collapse:collapse}#pa th,#pa td{border:1px solid #777;padding:5px 7px;text-align:right}#pa th{background:#eee}}
 
 .feedback-panel{margin:12px 14px;padding:15px;border:1px solid var(--bd);border-radius:16px;background:var(--card)}.feedback-panel h2{font-size:16px;margin:0 0 6px}.feedback-panel p{font-size:12px;line-height:1.9;color:var(--mu);margin:0 0 10px}.feedback-panel .btn{margin-top:8px}
-.activation-gate{position:fixed;inset:0;z-index:9999;background:rgba(12,18,28,.94);display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto}
-.activation-card{width:100%;max-width:440px;background:var(--card);color:var(--tx);border:2px solid var(--ac);border-radius:20px;padding:22px;box-shadow:0 18px 60px rgba(0,0,0,.35);text-align:center}
-.activation-logo{font-size:25px;font-weight:800;color:var(--ac2)}
-.activation-card h2{margin:10px 0;font-size:20px}
-.activation-card p{font-size:13px;line-height:1.9;color:var(--mu)}
-.activation-card input{text-align:center;font-weight:800;letter-spacing:1px;text-transform:uppercase;margin-top:10px}
-.activation-message{min-height:42px;border-radius:10px;padding:8px;background:rgba(245,158,11,.12);color:var(--ac2)!important}
-.activation-card small{display:block;color:var(--mu);font-size:11px;line-height:1.8;margin-top:12px}
-.activation-new{border:2px solid #16a34a;background:rgba(22,163,74,.08);border-radius:12px;padding:12px;margin-top:10px}
-.activation-code{font-size:21px;font-weight:800;letter-spacing:2px;text-align:center;padding:14px 4px;background:var(--card);border:1px dashed var(--cf);border-radius:10px;margin:8px 0}
-.activation-row{border:1px solid var(--bd);border-radius:12px;padding:10px;margin:8px 0;background:var(--card)}
-.activation-row span{display:block;font-weight:700;color:var(--ac2);margin:3px 0}
-.activation-row small{display:block;color:var(--mu);font-size:11px;overflow-wrap:anywhere}
 
 .track-guide{margin:10px 0 14px;padding:13px 14px;border:2px solid #0369a1;border-right:6px solid #0284c7;border-radius:13px;background:linear-gradient(120deg,rgba(14,165,233,.16),rgba(59,130,246,.07));color:#075985;font-size:13px;font-weight:800;line-height:2;box-shadow:0 0 0 0 rgba(14,165,233,.35);animation:trackGlow 2s infinite}
 @keyframes trackGlow{0%,100%{box-shadow:0 0 0 0 rgba(14,165,233,.28)}50%{box-shadow:0 0 0 6px rgba(14,165,233,0)}}
@@ -247,9 +234,7 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 <div class="bar h" id="bar" onclick="openCart()"><span id="bn"></span><b id="bt"></b></div>
 <div class="sheet" id="sh" onclick="if(event.target===this)closeSh()"><div class="in" id="in"></div></div>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2"></script>
-<script defer src="app.js?v=barqyar-activation-prompt-20261123"></script>
-<script defer src="ai-chat.js?v=1"></script>
-
+<script defer src="app.js?v=barqyar-no-activation-no-ai-20261124"></script>
 <script>
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
 </script>
