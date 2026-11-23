@@ -11,64 +11,8 @@ function pr(n){return f(n)+' تومان'}
 function en(n){return Number(n).toLocaleString('en-US')+' تومان'}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function val(i){var e=$(i);return e?e.value:''}
-var activationIdentity=null,activationUnlocked=false,ACTIVATION_STORAGE_KEY='barqyar_device_activation_v1';
-function getActivationIdentity(){
- if(activationIdentity)return activationIdentity;
- try{var old=localStorage.getItem(ACTIVATION_STORAGE_KEY);if(old){var parsed=JSON.parse(old);if(parsed&&parsed.id&&parsed.secret){activationIdentity=parsed;return parsed}}}catch(e){}
- try{var bytes=new Uint8Array(32);crypto.getRandomValues(bytes);var secret=Array.prototype.map.call(bytes,function(x){return x.toString(16).padStart(2,'0')}).join('');var id=crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0;return (c==='x'?r:(r&3|8)).toString(16)});activationIdentity={id:id,secret:secret};try{localStorage.setItem(ACTIVATION_STORAGE_KEY,JSON.stringify(activationIdentity))}catch(e){}return activationIdentity}catch(e){return null}
-}
-function api(path,o){o=o||{};var h={apikey:KEY,Authorization:'Bearer '+(token||KEY),'Content-Type':'application/json'};var di=getActivationIdentity();if(di)h['x-client-info']='barqyar-device='+di.id+';secret='+di.secret;if(o.prefer)h.Prefer=o.prefer;return fetch(SB+'/rest/v1/'+path,{method:o.method||'GET',headers:h,body:o.body?JSON.stringify(o.body):undefined,keepalive:!!o.keep}).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error(t||r.status)});return r.status===204?null:r.text().then(function(t){return t?JSON.parse(t):null})})}
-function hideActivationGate(){var g=$('activationGate');if(g)g.remove()}
-function showActivationGate(message){
- var g=$('activationGate');if(!g){g=document.createElement('div');g.id='activationGate';g.className='activation-gate';document.body.appendChild(g)}
- g.innerHTML='<div class="activation-card"><div class="activation-logo">⚡ برق‌یار</div><h2>فعال‌سازی برنامه</h2><p>برای استفاده از برنامه، کد فعال‌سازی اختصاصی را که از مدیر دریافت کرده‌اید وارد کنید.</p><form onsubmit="submitActivation();return false"><input id="activationCode" dir="ltr" autocomplete="one-time-code" placeholder="BYR-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" maxlength="36" required><button class="btn" type="submit">فعال‌سازی برنامه</button></form><p id="activationMessage" class="activation-message">'+(message||'کد فقط یک‌بار قابل استفاده است و به همین دستگاه اختصاص می‌یابد.')+'</p><button class="btn gh" type="button" onclick="activationAdminLogin()">ورود مدیر / ساخت کد فعال‌سازی</button><small>پس از فعال‌سازی، در دفعات بعد نیازی به واردکردن مجدد کد نیست.</small></div>';
-}
-function activationAdminLogin(){hideActivationGate();openAdmin()}
-function submitActivation(){
- var code=val('activationCode').trim().toUpperCase(),di=getActivationIdentity(),m=$('activationMessage');
- if(!di){if(m)m.textContent='ذخیره شناسه دستگاه ممکن نیست. حافظه مرورگر را بررسی کنید.';return}
- if(!code){if(m)m.textContent='کد فعال‌سازی را وارد کنید.';return}
- if(m)m.textContent='در حال بررسی کد…';
- api('rpc/shop_redeem_activation',{method:'POST',body:{p_code:code,p_device_id:di.id,p_device_secret:di.secret}})
- .then(function(r){if(!r||r.ok!==true)throw new Error('فعال‌سازی تأیید نشد');activationUnlocked=true;hideActivationGate();load();startProductRealtime();if(mode==='cart')cartView();else if(m)m.textContent='کد فعال‌سازی با موفقیت ثبت شد. دسترسی این دستگاه فعال گردید.'})
- .catch(function(e){if(m)m.textContent=errMsg(e)||'کد معتبر نیست، منقضی شده یا قبلاً استفاده شده است.'})
-}
-function checkDeviceActivation(){
- var di=getActivationIdentity();if(!di)return Promise.resolve(false);
- return api('rpc/shop_check_activation',{method:'POST',body:{p_device_id:di.id,p_device_secret:di.secret}})
-  .then(function(ok){return ok===true})
-  .catch(function(){return false});
-}
-function initActivation(){
- adminAuthClient.auth.getSession().then(function(result){
-  var session=result&&result.data&&result.data.session;
-  if(session&&session.access_token){
-   token=session.access_token;
-   return api('rpc/shop_is_admin').then(function(isAdmin){
-    if(isAdmin===true){managerAccess=true;activationUnlocked=true;return true}
-    managerAccess=false;token=null;
-    return adminAuthClient.auth.signOut().then(function(){return false});
-   }).catch(function(){managerAccess=false;token=null;return false});
-  }
-  return false;
- }).then(function(isAdmin){
-  if(isAdmin){hideActivationGate();load();startProductRealtime();return}
-  return checkDeviceActivation().then(function(active){
-   activationUnlocked=active;
-   if(active){
-    hideActivationGate();
-    load();
-    startProductRealtime();
-   }else{
-    showActivationGate('برای فعال‌کردن این دستگاه، کد یک‌بارمصرفی را که مدیر صادر کرده است وارد کنید. برای دریافت کد با مدیر برنامه تماس بگیرید.');
-   }
-  });
- }).catch(function(e){
-  console.warn('Activation status check failed:',e);
-  activationUnlocked=false;
-  showActivationGate('بررسی وضعیت فعال‌سازی انجام نشد. اتصال اینترنت را بررسی کنید و دوباره تلاش کنید.');
- });
-}
+function api(path,o){o=o||{};var h={apikey:KEY,Authorization:'Bearer '+(token||KEY),'Content-Type':'application/json'};if(o.prefer)h.Prefer=o.prefer;return fetch(SB+'/rest/v1/'+path,{method:o.method||'GET',headers:h,body:o.body?JSON.stringify(o.body):undefined,keepalive:!!o.keep}).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error(t||r.status)});return r.status===204?null:r.text().then(function(t){return t?JSON.parse(t):null})})}
+function initActivation(){load();startProductRealtime()}
 function load(){refreshProducts()}
 function refreshProducts(){
  if(managerAccess)return;
@@ -87,15 +31,14 @@ var productChannel=null,productRealtimeClient=null;
 function startProductRealtime(){
  if(productChannel||!window.supabase||!window.supabase.createClient)return;
  try{
-  var di=getActivationIdentity(),headers={};if(di)headers['x-client-info']='barqyar-device='+di.id+';secret='+di.secret;
-  productRealtimeClient=window.supabase.createClient(SB,KEY,{global:{headers:headers}});
+  productRealtimeClient=window.supabase.createClient(SB,KEY);
   productChannel=productRealtimeClient.channel('barqyar-products-live')
    .on('postgres_changes',{event:'*',schema:'public',table:'shop_products'},function(){refreshProducts()})
    .subscribe(function(status){if(status==='SUBSCRIBED')console.log('Barqyar live product updates connected')});
  }catch(e){console.warn('Realtime connection unavailable',e)}
 }
-document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&activationUnlocked)refreshProducts()});
-window.addEventListener('online',function(){if(activationUnlocked)refreshProducts()});
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')refreshProducts()});
+window.addEventListener('online',function(){refreshProducts()});
 function cats(){return ['همه'].concat(P.map(function(x){return x.category}).filter(function(v,i,a){return v&&a.indexOf(v)===i}))}
 function chg(id,d){cart[id]=Math.max(0,(cart[id]||0)+d);if(!cart[id])delete cart[id];saved=false;draw();if(mode==='cart')cartView()}
 function show(m){mode=m;$('sh').className='sheet o'}
@@ -144,12 +87,12 @@ function login(){
   if(result.error||!result.data||!result.data.session)return loginView('ایمیل یا رمز عبور اشتباه است.');
   token=result.data.session.access_token;
   return api('rpc/shop_is_admin').then(function(ok){
-   if(ok===true){managerAccess=true;hideActivationGate();adminView()}
+   if(ok===true){managerAccess=true;adminView()}
    else{token=null;managerAccess=false;return adminAuthClient.auth.signOut().then(function(){loginView('این حساب در فهرست مدیران مجاز برق‌یار نیست.')})}
   });
  }).catch(function(){token=null;managerAccess=false;loginView('تأیید ورود مدیر انجام نشد. اتصال را بررسی و دوباره تلاش کنید.')});
 }
-function logout(){adminAuthClient.auth.signOut().finally(function(){token=null;managerAccess=false;closeSh();checkDeviceActivation().then(function(active){activationUnlocked=active;hideActivationGate();load();startProductRealtime()}).catch(function(){activationUnlocked=false;hideActivationGate();load();startProductRealtime()})})}
+function logout(){adminAuthClient.auth.signOut().finally(function(){token=null;managerAccess=false;closeSh();load();startProductRealtime()})}
 function fail(e){$('ab').innerHTML='<p class="err">دسترسی ندارید یا خطایی رخ داد. با ایمیل مدیر وارد شوید.</p>'}
 
 function ost(i,s){api('rpc/shop_admin_set_order_status',{method:'POST',body:{p_order_id:O[i].id,p_status:s}}).then(ordersView).catch(function(e){alert(errMsg(e)||'انجام نشد')})}
@@ -383,7 +326,7 @@ function submitAppFeedback(){
 /* مدیر */
 function setAdminTab(t){tab=t;adminView()}
 
-function adminView(){if(!token||!managerAccess){loginView('برای ورود مدیر لازم است.');return}$('in').innerHTML='<div class="row"><h3>مدیریت</h3><button class="link" onclick="logout()">خروج</button></div><div class="tabs"><button class="chip" onclick="setAdminTab(&quot;orders&quot;)">سفارش‌ها</button><button class="chip" onclick="setAdminTab(&quot;products&quot;)">کالاها</button><button class="chip" onclick="setAdminTab(&quot;master&quot;)">جدول مادر</button><button class="chip" onclick="setAdminTab(&quot;report&quot;)">گزارش سفارش‌ها</button><button class="chip" onclick="setAdminTab(&quot;feedback&quot;)">بازخورد کاربران</button><button class="chip" onclick="setAdminTab(&quot;activation&quot;)">کدهای فعال‌سازی</button></div>'+(tab==='report'?'<button class="btn dl" onclick="docFinal()">📄 گزارش نهایی بایگانی</button>':'')+'<div id="ab"></div>';tab==='report'?reportView():tab==='orders'?ordersView():tab==='products'?productsView():tab==='master'?masterView():tab==='activation'?activationAdminView():tab==='feedback'?feedbackView():ordersView();if(tab!=='activation')startPoll()}
+function adminView(){if(!token||!managerAccess){loginView('برای ورود مدیر لازم است.');return}$('in').innerHTML='<div class="row"><h3>مدیریت</h3><button class="link" onclick="logout()">خروج</button></div><div class="tabs"><button class="chip" onclick="setAdminTab(&quot;orders&quot;)">سفارش‌ها</button><button class="chip" onclick="setAdminTab(&quot;products&quot;)">کالاها</button><button class="chip" onclick="setAdminTab(&quot;master&quot;)">جدول مادر</button><button class="chip" onclick="setAdminTab(&quot;report&quot;)">گزارش سفارش‌ها</button><button class="chip" onclick="setAdminTab(&quot;feedback&quot;)">بازخورد کاربران</button></div>'+(tab==='report'?'<button class="btn dl" onclick="docFinal()">📄 گزارش نهایی بایگانی</button>':'')+'<div id="ab"></div>';tab==='report'?reportView():tab==='orders'?ordersView():tab==='products'?productsView():tab==='master'?masterView():tab==='feedback'?feedbackView():ordersView();startPoll()}
 function feedbackView(){
  var box=$('ab');if(!box)return;box.innerHTML='<p class="mu">در حال دریافت بازخورد کاربران…</p>';
  api('shop_app_feedback?select=id,rating,feedback_type,message,status,admin_note,summary,archived_at,created_at&order=created_at.desc&limit=250').then(function(rows){
@@ -400,30 +343,6 @@ function feedbackSave(i){var x=AF[i];if(!x)return;var summary=val('fbSummary_'+i
 function feedbackArchive(i){var x=AF[i];if(!x)return;var summary=val('fbSummary_'+i).trim();if(!summary){alert('ابتدا خلاصه موضوع را وارد کنید.');return}api('shop_app_feedback?id=eq.'+encodeURIComponent(x.id),{method:'PATCH',prefer:'return=minimal',body:{summary:summary,archived_at:new Date().toISOString(),status:'closed'}}).then(function(){feedbackView()}).catch(function(e){alert('بایگانی انجام نشد: '+(errMsg(e)||'دسترسی مدیر را بررسی کنید.'))})}
 function feedbackUnarchive(i){var x=AF[i];if(!x)return;api('shop_app_feedback?id=eq.'+encodeURIComponent(x.id),{method:'PATCH',prefer:'return=minimal',body:{archived_at:null}}).then(function(){feedbackView()}).catch(function(e){alert('بازگردانی انجام نشد: '+(errMsg(e)||'دسترسی مدیر را بررسی کنید.'))})}
 function feedbackDelete(i){var x=AF[i];if(!x||!confirm('بازخورد #'+x.id+' برای همیشه حذف شود؟ این کار برگشت‌پذیر نیست.'))return;api('shop_app_feedback?id=eq.'+encodeURIComponent(x.id),{method:'DELETE',prefer:'return=minimal'}).then(function(){feedbackView()}).catch(function(e){alert('حذف انجام نشد: '+(errMsg(e)||'دسترسی مدیر را بررسی کنید.'))})}
-function activationAdminView(){
- $('ab').innerHTML='<div class="ar"><b>صدور کد فعال‌سازی یک‌بارمصرف</b><p class="mu">کد فقط پس از دریافت درخواست کاربر و به‌صورت دستی توسط مدیر صادر می‌شود. هر کد فقط یک‌بار و برای یک دستگاه قابل استفاده است؛ مشاهده و شروع برنامه به کد نیاز ندارد. مدیر می‌تواند دسترسی دستگاه را لغو کند.</p><label>اعتبار کد برای فعال‌سازی</label><select id="activationDays"><option value="7">۷ روز</option><option value="30" selected>۳۰ روز (پیشنهادی)</option><option value="90">۹۰ روز</option><option value="180">۱۸۰ روز</option><option value="365">۳۶۵ روز</option></select><button class="btn" onclick="activationCreateCode()">＋ ایجاد کد جدید</button><div id="activationNewCode"></div></div><div class="ar"><div class="row"><b>فهرست کدها و دستگاه‌ها</b><button class="link" onclick="activationRefresh()">بروزرسانی</button></div><div id="activationList" class="mu">در حال دریافت…</div></div>';
- activationRefresh();
-}
-function activationCreateCode(){
- var days=Number(val('activationDays'))||30;
- api('rpc/shop_admin_create_activation_code',{method:'POST',body:{p_expires_days:days}})
- .then(function(r){if(!r||!r.code)throw new Error('کد ایجاد نشد');$('activationNewCode').innerHTML='<div class="activation-new"><b>کد جدید؛ فقط همین یک‌بار نمایش داده می‌شود:</b><div class="activation-code" dir="ltr">'+esc(r.code)+'</div><button class="btn gh" onclick="activationCopyCode(\''+esc(r.code)+'\')">کپی کد</button><p class="mu">آخرین مهلت ثبت کد: '+dt(r.expires_at)+'</p><p class="mu">این کد را برای یک کاربر ارسال کنید. پس از استفاده، دیگر قابل استفاده نیست.</p></div>';activationRefresh()})
- .catch(function(e){alert(errMsg(e)||'ساخت کد ناموفق بود؛ ورود مدیر را بررسی کنید.')})
-}
-function activationCopyCode(code){try{navigator.clipboard.writeText(code).then(function(){alert('کد کپی شد')}).catch(function(){alert('کد را به‌صورت دستی انتخاب و کپی کنید: '+code)})}catch(e){alert('کد را به‌صورت دستی انتخاب و کپی کنید: '+code)}}
-function activationRefresh(){
- var box=$('activationList');if(!box)return;box.textContent='در حال دریافت…';
- api('rpc/shop_admin_list_activation_codes',{method:'POST',body:{}})
- .then(function(rows){rows=rows||[];if(!rows.length){box.innerHTML='<p class="mu">هنوز کدی ساخته نشده است.</p>';return}
- box.innerHTML=rows.map(function(x){
-  var status=x.revoked_at?'کد لغوشده':x.redeemed_at?(x.activation_revoked_at?'فعال‌سازی لغوشده':'استفاده‌شده'):(new Date(x.expires_at).getTime()<Date.now()?'منقضی‌شده':'آماده استفاده');
-  var action=x.device_id&&!x.activation_revoked_at?'<button onclick="activationRevokeDevice(\''+esc(x.device_id)+'\')">لغو دسترسی دستگاه</button>':(!x.redeemed_at&&!x.revoked_at?'<button onclick="activationRevokeCode(\''+esc(x.id)+'\')">لغو کد</button>':'');
-  return '<div class="activation-row"><b>کد …'+esc(x.code_hint)+'</b><span>'+status+'</span><small>ایجاد: '+dt(x.created_at)+' · انقضا: '+dt(x.expires_at)+'</small>'+(x.redeemed_at?'<small>استفاده: '+dt(x.redeemed_at)+'</small>':'')+(x.device_id?'<small dir="ltr">دستگاه: '+esc(x.device_id)+'</small>':'')+'<div class="acts">'+action+'</div></div>'
- }).join('')})
- .catch(function(e){box.innerHTML='<p class="err">دریافت فهرست کدها ناموفق بود: '+esc(errMsg(e)||'خطای اتصال یا دسترسی مدیر')+'</p>'})
-}
-function activationRevokeCode(id){if(!confirm('این کد استفاده‌نشده لغو شود؟'))return;api('rpc/shop_admin_revoke_activation_code',{method:'POST',body:{p_code_id:id}}).then(activationRefresh).catch(function(e){alert(errMsg(e)||'لغو کد انجام نشد')})}
-function activationRevokeDevice(id){if(!confirm('دسترسی این دستگاه فوراً لغو شود؟'))return;api('rpc/shop_admin_revoke_activation',{method:'POST',body:{p_device_id:id}}).then(activationRefresh).catch(function(e){alert(errMsg(e)||'لغو دسترسی انجام نشد')})}
 function ordersView(){
  api('shop_orders?select=*&report_archived_at=is.null&order=created_at.desc&limit=300').then(function(d){
   O=d||[];
