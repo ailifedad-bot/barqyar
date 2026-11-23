@@ -12,7 +12,7 @@ function en(n){return Number(n).toLocaleString('en-US')+' تومان'}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function val(i){var e=$(i);return e?e.value:''}
 function api(path,o){o=o||{};var h={apikey:KEY,Authorization:'Bearer '+(token||KEY),'Content-Type':'application/json'};if(o.prefer)h.Prefer=o.prefer;return fetch(SB+'/rest/v1/'+path,{method:o.method||'GET',headers:h,body:o.body?JSON.stringify(o.body):undefined,keepalive:!!o.keep}).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error(t||r.status)});return r.status===204?null:r.text().then(function(t){return t?JSON.parse(t):null})})}
-function initActivation(){load();startProductRealtime()}
+function initApp(){load();startProductRealtime()}
 function load(){refreshProducts()}
 function refreshProducts(){
  if(managerAccess)return;
@@ -434,8 +434,7 @@ function chk(){if(!token){clearInterval(pollT);pollT=null;lastNew=-1;badge(0);re
   if(lastNew>=0&&n>lastNew){beep();try{if(window.Notification&&Notification.permission==='granted')new Notification('سفارش جدید در برق‌یار')}catch(e){}if(mode==='admin'&&tab==='orders')ordersView()}
   lastNew=n}).catch(function(){})}
 function startPoll(){try{if(window.Notification&&Notification.permission==='default')Notification.requestPermission()}catch(e){}if(pollT)return;chk();pollT=setInterval(chk,30000)}
-initActivation();
-
+initApp();
 /* ---- نصب PWA ---- */
 var dip=null;
 function isStd(){return (window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true}
