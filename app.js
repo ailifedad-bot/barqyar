@@ -78,7 +78,8 @@ var productChannel=null,productRealtimeClient=null;
 function startProductRealtime(){
  if(productChannel||!window.supabase||!window.supabase.createClient)return;
  try{
-  productRealtimeClient=window.supabase.createClient(SB,KEY);
+  var di=getActivationIdentity(),headers={};if(di)headers['x-client-info']='barqyar-device='+di.id+';secret='+di.secret;
+  productRealtimeClient=window.supabase.createClient(SB,KEY,{global:{headers:headers}});
   productChannel=productRealtimeClient.channel('barqyar-products-live')
    .on('postgres_changes',{event:'*',schema:'public',table:'shop_products'},function(){refreshProducts()})
    .subscribe(function(status){if(status==='SUBSCRIBED')console.log('Barqyar live product updates connected')});
