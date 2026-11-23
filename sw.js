@@ -1,4 +1,4 @@
-var CACHE='barqyar-v59-public-start-requested-device-activation-20261123';
+var CACHE='barqyar-v60-public-orders-auto-track-20261123';
 var SHELL=['./','index.html','manifest.json','app.js','privacy.html','icon-192.png','icon-512.png'];
 self.addEventListener('install',function(e){
  e.waitUntil(caches.open(CACHE).then(function(c){return c.addAll(SHELL)}).then(function(){return self.skipWaiting()}));
