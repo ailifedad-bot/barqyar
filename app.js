@@ -17,7 +17,7 @@ function getActivationIdentity(){
  try{var old=localStorage.getItem(ACTIVATION_STORAGE_KEY);if(old){var parsed=JSON.parse(old);if(parsed&&parsed.id&&parsed.secret){activationIdentity=parsed;return parsed}}}catch(e){}
  try{var bytes=new Uint8Array(32);crypto.getRandomValues(bytes);var secret=Array.prototype.map.call(bytes,function(x){return x.toString(16).padStart(2,'0')}).join('');var id=crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0;return (c==='x'?r:(r&3|8)).toString(16)});activationIdentity={id:id,secret:secret};try{localStorage.setItem(ACTIVATION_STORAGE_KEY,JSON.stringify(activationIdentity))}catch(e){}return activationIdentity}catch(e){return null}
 }
-function api(path,o){o=o||{};var h={apikey:KEY,Authorization:'Bearer '+(token||KEY),'Content-Type':'application/json'};if(o.prefer)h.Prefer=o.prefer;return fetch(SB+'/rest/v1/'+path,{method:o.method||'GET',headers:h,body:o.body?JSON.stringify(o.body):undefined,keepalive:!!o.keep}).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error(t||r.status)});return r.status===204?null:r.text().then(function(t){return t?JSON.parse(t):null})})}
+function api(path,o){o=o||{};var h={apikey:KEY,Authorization:'Bearer '+(token||KEY),'Content-Type':'application/json'};var di=getActivationIdentity();if(di)h['x-client-info']='barqyar-device='+di.id+';secret='+di.secret;if(o.prefer)h.Prefer=o.prefer;return fetch(SB+'/rest/v1/'+path,{method:o.method||'GET',headers:h,body:o.body?JSON.stringify(o.body):undefined,keepalive:!!o.keep}).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error(t||r.status)});return r.status===204?null:r.text().then(function(t){return t?JSON.parse(t):null})})}
 function hideActivationGate(){var g=$('activationGate');if(g)g.remove()}
 function showActivationGate(message){
  var g=$('activationGate');if(!g){g=document.createElement('div');g.id='activationGate';g.className='activation-gate';document.body.appendChild(g)}
@@ -30,17 +30,22 @@ function submitActivation(){
  if(!code){if(m)m.textContent='کد فعال‌سازی را وارد کنید.';return}
  if(m)m.textContent='در حال بررسی کد…';
  api('rpc/shop_redeem_activation',{method:'POST',body:{p_code:code,p_device_id:di.id,p_device_secret:di.secret}})
- .then(function(r){if(!r||r.ok!==true)throw new Error('فعال‌سازی تأیید نشد');activationUnlocked=true;hideActivationGate();if(m)m.textContent='کد اشتراک با موفقیت ثبت شد. استفاده عادی از برنامه رایگان است و جزئیات امکانات ویژه طبق طرح اعلامی ارائه می‌شود.';load();startProductRealtime()})
+ .then(function(r){if(!r||r.ok!==true)throw new Error('فعال‌سازی تأیید نشد');activationUnlocked=true;hideActivationGate();if(m)m.textContent='کد فعال‌سازی با موفقیت ثبت شد. دسترسی این دستگاه فعال گردید.';load();startProductRealtime()})
  .catch(function(e){if(m)m.textContent=errMsg(e)||'کد معتبر نیست، منقضی شده یا قبلاً استفاده شده است.'})
 }
+function checkDeviceActivation(){
+ var di=getActivationIdentity();if(!di)return Promise.resolve(false);
+ return api('rpc/shop_check_activation',{method:'POST',body:{p_device_id:di.id,p_device_secret:di.secret}})
+  .then(function(ok){return ok===true})
+  .catch(function(){return false});
+}
 function initActivation(){
- // استفاده معمولی از برق‌یار رایگان است؛ کد اشتراک فقط در صورت تمایل کاربر ثبت می‌شود.
  adminAuthClient.auth.getSession().then(function(result){
   var session=result&&result.data&&result.data.session;
   if(session&&session.access_token){
    token=session.access_token;
    return api('rpc/shop_is_admin').then(function(isAdmin){
-    if(isAdmin===true){managerAccess=true;load();startProductRealtime();return true}
+    if(isAdmin===true){managerAccess=true;activationUnlocked=true;hideActivationGate();load();startProductRealtime();return true}
     managerAccess=false;token=null;
     return adminAuthClient.auth.signOut().then(function(){return false});
    }).catch(function(){managerAccess=false;token=null;return false});
@@ -48,10 +53,11 @@ function initActivation(){
   return false;
  }).then(function(isAdmin){
   if(isAdmin)return;
-  activationUnlocked=true;
-  return api('shop_products?select=id,name,category,unit,price,emoji,in_stock,image_url,stock_qty,sku&order=id')
-   .then(function(d){P=Array.isArray(d)?d:[];draw();startProductRealtime()})
-   .catch(function(e){console.warn('Product loading failed:',e);if($('grid'))$('grid').innerHTML='<p class="err" style="grid-column:1/-1;text-align:center">دریافت کالاها ناموفق بود. اتصال اینترنت را بررسی کنید و دوباره تلاش کنید.</p>'});
+  return checkDeviceActivation().then(function(active){
+   activationUnlocked=active;
+   if(active){hideActivationGate();load();startProductRealtime()}
+   else{showActivationGate('برای استفاده از برق‌یار، کد فعال‌سازی رایگان را از مدیر دریافت کنید.')}
+  });
  });
 }
 function load(){refreshProducts()}
@@ -97,27 +103,15 @@ function openTerms(){
  '<p class="mu">با انتخاب گزینه پذیرش در فرم سفارش، کاربر اعلام می‌کند این شرایط را مطالعه کرده و پذیرفته است.</p>'+
  '<button class="btn" type="button" onclick="closeSh()">بازگشت به برنامه</button>';
 }
-var customerDraftTimer=null,customerDraftPromise=null,customerDraftKey='';
-function saveCustomerDraft(){
- if(customerDraftTimer){clearTimeout(customerDraftTimer);customerDraftTimer=null}
- var name=val('nm').trim(),phone=toEn(val('ph').trim()),address=val('ad').trim();
- if(name.length<1||name.length>120||phone.replace(/[^0-9]/g,'').length<10)return Promise.resolve(null);
- var key=name+'|'+phone+'|'+address;
- if(customerDraftPromise&&customerDraftKey===key)return customerDraftPromise;
- customerDraftKey=key;
- customerDraftPromise=api('rpc/shop_register_customer',{method:'POST',body:{p_name:name,p_phone:phone,p_address:address}}).then(function(x){if(!x||!x.customer_id||!x.subscription_code)throw new Error('پرونده مشتری ایجاد نشد');return x}).finally(function(){customerDraftPromise=null});
- return customerDraftPromise;
-}
-function queueCustomerDraft(){if(customerDraftTimer)clearTimeout(customerDraftTimer);customerDraftTimer=setTimeout(function(){saveCustomerDraft().catch(function(e){console.warn('Customer draft save failed:',e)})},650)}
-function cancelCart(){if(customerDraftTimer){clearTimeout(customerDraftTimer);customerDraftTimer=null}saveCustomerDraft().then(function(x){cart={};saved=false;closeSh();draw();alert(x?'سبد خرید لغو شد؛ اطلاعات مشتری در بانک مشتریان ذخیره شد.':'سبد خرید لغو شد. برای ثبت پرونده مشتری، نام و شماره موبایل معتبر لازم است.')}).catch(function(e){cart={};saved=false;closeSh();draw();alert('سبد خرید لغو شد، اما ذخیره اطلاعات مشتری ناموفق بود: '+(errMsg(e)||'اتصال را بررسی کنید.'))})}
+function cancelCart(){cart={};saved=false;closeSh();draw();alert('سبد خرید لغو شد. اطلاعات واردشده در پرونده جداگانه ذخیره نمی‌شود.')}
 function cartView(){
  var L=lines(),h='';
  if(!L.n){$('in').innerHTML='<p style="text-align:center">سبد خرید خالی است</p><button class="btn" onclick="closeSh()">بستن</button>';return}
  L.a.forEach(function(i){var x=P.filter(function(p){return p.name===i.name})[0];h+='<div class="row"><div><b>'+esc(i.name)+'</b><br><small class="mu" dir="ltr">SKU: '+esc(i.sku||'—')+'</small><br><small class="mu">'+pr(i.price)+' × '+f(i.qty)+'</small></div><div class="qty"><button onclick="chg('+x.id+',1)">+</button><b>'+f(i.qty)+'</b><button onclick="chg('+x.id+',-1)">−</button></div></div>'});
  var nm=val('nm'),ph=val('ph'),ad=val('ad');
  $('in').innerHTML='<h3 style="margin:0 0 6px">سبد خرید</h3>'+h+'<div class="tot">جمع کل: '+pr(L.t)+'</div>'+
- '<input id="nm" placeholder="نام و نام خانوادگی" value="'+esc(nm)+'" oninput="queueCustomerDraft()" onblur="saveCustomerDraft().catch(function(){})"><label class="order-field-label" for="ph">موبایل مشتری</label><input id="ph" type="tel" inputmode="tel" dir="ltr" placeholder="موبایل مشتری" aria-describedby="phHelp" value="'+esc(ph)+'" oninput="queueCustomerDraft()" onblur="saveCustomerDraft().catch(function(){})"><p id="phHelp" class="order-field-help">شماره موبایل را با صفر ابتدایی وارد کنید؛ مثال: <b dir="ltr">۰۹۱۱۳۸۸۹۷۵۹</b></p><textarea id="ad" rows="2" placeholder="آدرس تحویل" oninput="queueCustomerDraft()" onblur="saveCustomerDraft().catch(function(){})">'+esc(ad)+'</textarea>'+
- '<div class="cfbox" style="margin:10px 0"><b>راهنمای مشتری</b><p class="mu" style="margin:6px 0">۱) اطلاعات تماس و نشانی را دقیق وارد کنید. ۲) پیام سفارش را در واتس‌اپ یا ایمیل ارسال کنید. ۳) کد پیگیری را نگه دارید. ۴) کد اشتراک مشتری را نگهداری کنید. ۵) وضعیت سفارش را از بخش پیگیری مشاهده کنید.</p></div><div class="cfbox" style="margin:10px 0;border:2px solid #b45309;background:rgba(245,158,11,.10)"><b>⚠️ شرایط استفاده و مسئولیت کاربران</b><p class="mu" style="margin:6px 0">کاربر مسئول نحوه استفاده، اطلاعات واردشده و اقداماتی است که از طریق برنامه انجام می‌دهد. خطاها و اشتباهات ناشی از استفاده نادرست یا ناآگاهی از راهنمای برنامه، سوءاستفاده و اقدامات غیرمجاز کاربران بر عهده خود آنان است. هک، دسترسی غیرمجاز و تغییر کدها یا تنظیمات برنامه بدون اجازه، خارج از اختیار و کنترل کاربر مجاز و مدیریت برنامه است؛ مسئولیت اقدامات و خسارات ناشی از آن، در حدودی که قانون اجازه می‌دهد، متوجه عامل آن خواهد بود. این بند مسئولیت‌های قانونی غیرقابل اسقاط مدیر و مالک را حذف نمی‌کند.</p><button class="btn gh" type="button" onclick="openTerms()">مطالعه متن کامل شرایط استفاده</button><label style="display:flex;gap:9px;align-items:flex-start;margin-top:10px;font-size:12px;line-height:1.9"><input id="termsAccepted" type="checkbox" style="width:auto;min-width:18px;margin:3px 0 0"><span>شرایط استفاده، مسئولیت کاربران و محدودیت‌های مربوط به دست‌کاری و دسترسی غیرمجاز را مطالعه کردم و می‌پذیرم.</span></label></div><p id="er" class="err"></p><div id="orderReceipt" class="cfbox" style="display:none;margin:10px 0"></div><p class="mu">روش ارسال سفارش:</p>'+
+ '<input id="nm" placeholder="نام و نام خانوادگی" value="'+esc(nm)+'"><label class="order-field-label" for="ph">موبایل مشتری</label><input id="ph" type="tel" inputmode="tel" dir="ltr" placeholder="موبایل مشتری" aria-describedby="phHelp" value="'+esc(ph)+'"><p id="phHelp" class="order-field-help">شماره موبایل را با صفر ابتدایی وارد کنید؛ مثال: <b dir="ltr">۰۹۱۱۳۸۸۹۷۵۹</b></p><textarea id="ad" rows="2" placeholder="آدرس تحویل">'+esc(ad)+'</textarea>'+
+ '<div class="cfbox" style="margin:10px 0"><b>راهنمای مشتری</b><p class="mu" style="margin:6px 0">۱) اطلاعات تماس و نشانی را دقیق وارد کنید. ۲) پیام سفارش را در واتس‌اپ یا ایمیل ارسال کنید. ۳) کد پیگیری را نگه دارید. ۴) کد پیگیری سفارش را نگهداری کنید. ۵) وضعیت سفارش را از بخش پیگیری مشاهده کنید.</p></div><div class="cfbox" style="margin:10px 0;border:2px solid #b45309;background:rgba(245,158,11,.10)"><b>⚠️ شرایط استفاده و مسئولیت کاربران</b><p class="mu" style="margin:6px 0">کاربر مسئول نحوه استفاده، اطلاعات واردشده و اقداماتی است که از طریق برنامه انجام می‌دهد. خطاها و اشتباهات ناشی از استفاده نادرست یا ناآگاهی از راهنمای برنامه، سوءاستفاده و اقدامات غیرمجاز کاربران بر عهده خود آنان است. هک، دسترسی غیرمجاز و تغییر کدها یا تنظیمات برنامه بدون اجازه، خارج از اختیار و کنترل کاربر مجاز و مدیریت برنامه است؛ مسئولیت اقدامات و خسارات ناشی از آن، در حدودی که قانون اجازه می‌دهد، متوجه عامل آن خواهد بود. این بند مسئولیت‌های قانونی غیرقابل اسقاط مدیر و مالک را حذف نمی‌کند.</p><button class="btn gh" type="button" onclick="openTerms()">مطالعه متن کامل شرایط استفاده</button><label style="display:flex;gap:9px;align-items:flex-start;margin-top:10px;font-size:12px;line-height:1.9"><input id="termsAccepted" type="checkbox" style="width:auto;min-width:18px;margin:3px 0 0"><span>شرایط استفاده، مسئولیت کاربران و محدودیت‌های مربوط به دست‌کاری و دسترسی غیرمجاز را مطالعه کردم و می‌پذیرم.</span></label></div><p id="er" class="err"></p><div id="orderReceipt" class="cfbox" style="display:none;margin:10px 0"></div><p class="mu">روش ارسال سفارش:</p>'+
  '<a class="btn wa" target="_blank" rel="noopener" href="#" onclick="return go(this,\'wa\')">واتس‌اپ</a>'+
  '<a class="btn tg" target="_blank" rel="noopener" href="https://t.me/'+TG+'" onclick="return go(this,\'tg\')">تلگرام (@'+TG+')</a>'+
  '<form method="POST" action="https://formsubmit.co/'+MAIL+'" target="_blank" onsubmit="return go(this,\'mail\')">'+
@@ -125,21 +119,11 @@ function cartView(){
  '<input type="hidden" name="name" id="f_n"><input type="hidden" name="phone" id="f_p"><input type="hidden" name="address" id="f_a"><input type="hidden" name="order" id="f_o">'+
  '<button class="btn gh" type="submit">ایمیل</button></form><button class="btn gh" type="button" onclick="cancelCart()">انصراف از سبد خرید</button>';
 }
-function openSubscription(){
- show('subscription');
- $('in').innerHTML='<h3 style="margin:0 0 6px">اشتراک اختیاری برق‌یار</h3><p class="mu">استفاده عادی از برنامه رایگان است. اگر مایل به تهیه اشتراک یا حمایت از توسعه برق‌یار هستید، مدت موردنظر را انتخاب و درخواست خود را ارسال کنید.</p><label>مدت اشتراک درخواستی</label><select id="subDays"><option value="30">یک‌ماهه (۳۰ روز)</option><option value="90">سه‌ماهه (۹۰ روز)</option><option value="180">شش‌ماهه (۱۸۰ روز)</option><option value="365">یکساله (۳۶۵ روز)</option></select><input id="subName" placeholder="نام شما (اختیاری)"><input id="subPhone" type="tel" inputmode="tel" dir="ltr" placeholder="شماره تماس (اختیاری)"><a class="btn wa" href="#" target="_blank" rel="noopener" onclick="return sendSubscriptionRequest(this)">ارسال درخواست اشتراک در واتس‌اپ</a><div class="cfbox"><b>کد اشتراک دریافت کرده‌اید؟</b><p class="mu">کد را فقط در صورت دریافت از مدیر وارد کنید. این کد برای ثبت عضویت اختیاری است؛ استفاده معمولی از برنامه به کد نیاز ندارد.</p><input id="activationCode" dir="ltr" autocomplete="one-time-code" placeholder="کد اشتراک دریافتی"><p id="activationMessage" class="activation-message mu">کد اشتراک اختیاری است.</p><button class="btn gh" type="button" onclick="submitActivation()">ثبت کد اشتراک</button></div><button class="btn gh" onclick="closeSh()">ادامه استفاده رایگان از برق‌یار</button>';
-}
-function sendSubscriptionRequest(el){
- var days=Number(val('subDays'))||30,name=val('subName').trim(),phone=toEn(val('subPhone').trim());
- var duration=days===30?'یک‌ماهه':days===90?'سه‌ماهه':days===180?'شش‌ماهه':'یکساله';
- var message='سلام، می‌خواهم اشتراک اختیاری برنامه برق‌یار را داشته باشم.\nمدت درخواستی: '+duration+' ('+days+' روز)\nنام: '+(name||'ثبت نشده')+'\nشماره تماس: '+(phone||'ثبت نشده')+'\nلطفاً شرایط و روش پرداخت را اعلام کنید.';
- el.href='https://wa.me/'+WA+'?text='+encodeURIComponent(message);return true;
-}
 function openContact(){show('contact');
  $('in').innerHTML='<h3 style="margin:0 0 6px">تماس با ما</h3><a class="btn gh" href="tel:09366428816">📞 تماس تلفنی: ۰۹۳۶۶۴۲۸۸۱۶</a><a class="btn wa" target="_blank" rel="noopener" href="https://wa.me/'+WA+'">واتس‌اپ</a><a class="btn tg" target="_blank" rel="noopener" href="https://t.me/'+TG+'">تلگرام (@'+TG+')</a>'+
  '<h4 style="margin:16px 0 6px">ارسال پیام</h4><form method="POST" action="https://formsubmit.co/'+MAIL+'" target="_blank">'+
  '<input type="hidden" name="_subject" value="پیام جدید از برق‌یار"><input type="hidden" name="_captcha" value="false"><input type="hidden" name="_template" value="table"><input type="hidden" name="_next" value="'+esc(returnAppUrl(''))+'"><input type="hidden" name="return_link" value="'+esc(returnAppUrl(''))+'">'+
- '<input name="name" placeholder="نام" required><input name="phone" type="tel" placeholder="شماره موبایل مشتری (برای تشکیل پرونده مشتری)" required><textarea name="message" rows="3" placeholder="پیام شما" required></textarea><button class="btn" type="submit">ارسال پیام</button><p class="mu">پس از ارسال پیام، با لینک بازگشت به برنامه برق‌یار برمی‌گردید.</p></form>';
+ '<input name="name" placeholder="نام" required><input name="phone" type="tel" placeholder="شماره موبایل تماس" required><textarea name="message" rows="3" placeholder="پیام شما" required></textarea><button class="btn" type="submit">ارسال پیام</button><p class="mu">پس از ارسال پیام، با لینک بازگشت به برنامه برق‌یار برمی‌گردید.</p></form>';
 }
 /* ---------- مدیر ---------- */
 function openAdmin(){show('admin');token&&managerAccess?adminView():loginView()}
@@ -342,7 +326,7 @@ function draw(){
  var L=lines();$('bar').className='bar'+(L.n?'':' h');$('bn').textContent='مشاهده سبد ('+f(L.n)+' کالا)';$('bt').textContent=pr(L.t);
 }
 function orderText(){var L=lines();return 'سفارش جدید از برق‌یار\\nکد پیگیری: '+code+'\\n'+L.a.map(function(i){return '• ['+(i.sku||'بدون SKU')+'] '+i.name+' × '+i.qty+' ('+i.unit+') = '+en(i.qty*i.price)}).join('\\n')+'\\nجمع کل: '+en(L.t)+'\\nنام: '+val('nm')+'\\nتلفن: '+val('ph')+'\\nآدرس: '+val('ad')+'\\n\\nلینک پیگیری وضعیت سفارش: '+returnAppUrl(code)}
-function showOrderReceipt(subscriptionCode){var r=$('orderReceipt');if(r){r.style.display='block';r.innerHTML='<b>✅ سفارش در سامانه ثبت شد</b><div>کد پیگیری: <b dir="ltr">'+esc(code)+'</b></div><div>کد اشتراک مشتری: <b dir="ltr">'+esc(subscriptionCode||'—')+'</b></div><button class="btn" type="button" onclick="openTrackForCurrentOrder()">پیگیری همین سفارش</button>'}try{sessionStorage.setItem('barqyar_last_order',JSON.stringify({code:code,subscriptionCode:subscriptionCode||''}))}catch(e){}}
+function showOrderReceipt(){var r=$('orderReceipt');if(r){r.style.display='block';r.innerHTML='<b>✅ سفارش در سامانه ثبت شد</b><div>کد پیگیری: <b dir="ltr">'+esc(code)+'</b></div><button class="btn" type="button" onclick="openTrackForCurrentOrder()">پیگیری همین سفارش</button>'}try{sessionStorage.setItem('barqyar_last_order',JSON.stringify({code:code}))}catch(e){}}
 var LOCAL_ORDERS_KEY='barqyar_my_orders_v1';
 function localPhoneKey(v){return toEn(String(v||'')).replace(/[^0-9]/g,'')}
 function rememberLocalOrder(o){try{var a=JSON.parse(localStorage.getItem(LOCAL_ORDERS_KEY)||'[]');if(!Array.isArray(a))a=[];var summary=(o.items||[]).map(function(x){return (x.sku?'['+x.sku+'] ':'')+x.name+' × '+x.qty}).join('، ');a=a.filter(function(x){return x.code!==o.tracking_code});a.unshift({code:o.tracking_code,phone:localPhoneKey(o.phone),name:o.customer_name,summary:summary,total:o.total,created_at:new Date().toISOString()});localStorage.setItem(LOCAL_ORDERS_KEY,JSON.stringify(a.slice(0,30)))}catch(e){console.warn('Local order history could not be saved',e)}}
@@ -350,7 +334,7 @@ function localOrderOptions(){var phone=localPhoneKey(val('trackPhone')),a=[];try
 function renderLocalOrderChoices(){var s=$('trackOrderSelect');if(!s)return;var a=localOrderOptions();s.innerHTML='<option value="">انتخاب کد سفارش شما…</option>'+a.map(function(x){return '<option value="'+esc(x.code)+'">'+esc(x.code)+' — '+esc((x.summary||'سفارش').slice(0,65))+' — '+pr(x.total)+'</option>'}).join('');if(!a.length)s.insertAdjacentHTML('beforeend','<option value="" disabled>سفارشی با این شماره در همین مرورگر ذخیره نشده است</option>')}
 function chooseLocalOrder(){var s=$('trackOrderSelect');if(s&&s.value){$('tc').value=s.value;doTrack()}}
 function openTrackForCurrentOrder(){openTrack();setTimeout(function(){if($('tc')){$('tc').value=code;doTrack()}},250)}
-function go(el,k){if(!$('termsAccepted')||!$('termsAccepted').checked){$('er').className='err';$('er').textContent='برای ادامه ثبت سفارش، ابتدا شرایط استفاده را مطالعه و گزینه پذیرش را فعال کنید.';return false}if(!val('nm').trim()||!val('ph').trim()||!val('ad').trim()){$('er').textContent='لطفاً نام، شماره تماس و نشانی را کامل کنید.';return false}var L=lines();if(!L.n)return false;if(!saved){saved=true;code=genCode();var od={customer_name:val('nm').trim(),phone:toEn(val('ph').trim()),address:val('ad').trim(),items:L.a,total:L.t,tracking_code:code,status:'shipping'};$('er').className='mu';$('er').textContent='در حال ثبت سفارش و پرونده مشتری…';api('rpc/shop_register_customer',{method:'POST',body:{p_name:od.customer_name,p_phone:od.phone,p_address:od.address}}).then(function(c){if(!c||!c.customer_id||!c.subscription_code)throw new Error('پرونده مشتری ایجاد نشد');od.customer_id=c.customer_id;od.subscription_code=c.subscription_code;return api('shop_orders',{method:'POST',prefer:'return=minimal',keep:1,body:od}).then(function(){rememberLocalOrder(od);showOrderReceipt(c.subscription_code);$('er').className='okc';$('er').textContent='سفارش با موفقیت در برق‌یار ثبت شد. کد آن در فهرست پیگیری همین مرورگر ذخیره شد.'})}).catch(function(e){saved=false;$('er').className='err';$('er').textContent='ثبت سفارش ناموفق بود: '+(errMsg(e)||'اتصال یا اطلاعات را بررسی کنید.')})}var t=orderText();if(k==='wa')el.href='https://wa.me/'+WA+'?text='+encodeURIComponent(t);else if(k==='tg'){try{navigator.clipboard.writeText(t)}catch(e){}}else{$('f_n').value=val('nm');$('f_p').value=val('ph');$('f_a').value=val('ad');$('f_o').value=t;$('f_next').value=returnAppUrl(code);$('f_return').value=returnAppUrl(code)}return true}
+function go(el,k){if(!$('termsAccepted')||!$('termsAccepted').checked){$('er').className='err';$('er').textContent='برای ادامه ثبت سفارش، ابتدا شرایط استفاده را مطالعه و گزینه پذیرش را فعال کنید.';return false}if(!val('nm').trim()||!val('ph').trim()||!val('ad').trim()){$('er').textContent='لطفاً نام، شماره تماس و نشانی را کامل کنید.';return false}var L=lines();if(!L.n)return false;if(!saved){saved=true;code=genCode();var od={customer_name:val('nm').trim(),phone:toEn(val('ph').trim()),address:val('ad').trim(),items:L.a,total:L.t,tracking_code:code,status:'shipping'};$('er').className='mu';$('er').textContent='در حال ثبت سفارش…';api('shop_orders',{method:'POST',prefer:'return=minimal',keep:1,body:od}).then(function(){rememberLocalOrder(od);showOrderReceipt();$('er').className='okc';$('er').textContent='سفارش با موفقیت در برق‌یار ثبت شد. کد آن در فهرست پیگیری همین مرورگر ذخیره شد.'}).catch(function(e){saved=false;$('er').className='err';$('er').textContent='ثبت سفارش ناموفق بود: '+(errMsg(e)||'اتصال یا اطلاعات را بررسی کنید.')})}var t=orderText();if(k==='wa')el.href='https://wa.me/'+WA+'?text='+encodeURIComponent(t);else if(k==='tg'){try{navigator.clipboard.writeText(t)}catch(e){}}else{$('f_n').value=val('nm');$('f_p').value=val('ph');$('f_a').value=val('ad');$('f_o').value=t;$('f_next').value=returnAppUrl(code);$('f_return').value=returnAppUrl(code)}return true}
 function openTrack(){show('track');var hc=new URLSearchParams(location.search).get('track')||'';$('in').innerHTML='<h3 style="margin:0 0 8px">پیگیری سفارش</h3><div class="track-guide">🔎 برای مشاهده وضعیت، شماره موبایلی را وارد کنید که سفارش را با آن ثبت کرده‌اید؛ سپس کد همان سفارش را از فهرست انتخاب کنید.</div><label>شماره موبایل ثبت‌شده در سفارش</label><input id="trackPhone" type="tel" inputmode="tel" dir="ltr" placeholder="مثلاً 0912…" oninput="renderLocalOrderChoices()"><label>سفارش‌های ثبت‌شده در این مرورگر</label><select id="trackOrderSelect" onchange="chooseLocalOrder()"><option value="">ابتدا شماره موبایل را وارد کنید</option></select><p class="mu">با انتخاب هر سفارش، کد یکتای همان سفارش در کادر پیگیری قرار می‌گیرد.</p><label>کد یکتای سفارش</label><input id="tc" placeholder="کد پیگیری سفارش" dir="ltr" autocomplete="off" value="'+esc(hc)+'"><button class="btn" onclick="doTrack()">نمایش وضعیت سفارش</button><div id="tr" style="margin-top:10px"></div>';if(hc){setTimeout(function(){if($('tc'))doTrack()},0)}}
 function doTrack(){
  var c=val('tc').trim().toUpperCase();
@@ -394,7 +378,7 @@ function submitAppFeedback(){
 /* مدیر */
 function setAdminTab(t){tab=t;adminView()}
 
-function adminView(){if(!token||!managerAccess){loginView('برای ورود مدیر لازم است.');return}$('in').innerHTML='<div class="row"><h3>مدیریت</h3><button class="link" onclick="logout()">خروج</button></div><div class="tabs"><button class="chip" onclick="setAdminTab(&quot;orders&quot;)">سفارش‌ها</button><button class="chip" onclick="setAdminTab(&quot;products&quot;)">کالاها</button><button class="chip" onclick="setAdminTab(&quot;master&quot;)">جدول مادر</button><button class="chip" onclick="setAdminTab(&quot;customers&quot;)">مشتریان</button><button class="chip" onclick="setAdminTab(&quot;report&quot;)">گزارش سفارش‌ها</button><button class="chip" onclick="setAdminTab(&quot;feedback&quot;)">بازخورد کاربران</button><button class="chip" onclick="setAdminTab(&quot;activation&quot;)">کدهای فعال‌سازی</button></div>'+(tab==='report'?'<button class="btn dl" onclick="docFinal()">📄 گزارش نهایی بایگانی</button>':'')+'<div id="ab"></div>';tab==='report'?reportView():tab==='orders'?ordersView():tab==='products'?productsView():tab==='master'?masterView():tab==='activation'?activationAdminView():tab==='feedback'?feedbackView():customersView();if(tab!=='activation')startPoll()}
+function adminView(){if(!token||!managerAccess){loginView('برای ورود مدیر لازم است.');return}$('in').innerHTML='<div class="row"><h3>مدیریت</h3><button class="link" onclick="logout()">خروج</button></div><div class="tabs"><button class="chip" onclick="setAdminTab(&quot;orders&quot;)">سفارش‌ها</button><button class="chip" onclick="setAdminTab(&quot;products&quot;)">کالاها</button><button class="chip" onclick="setAdminTab(&quot;master&quot;)">جدول مادر</button><button class="chip" onclick="setAdminTab(&quot;report&quot;)">گزارش سفارش‌ها</button><button class="chip" onclick="setAdminTab(&quot;feedback&quot;)">بازخورد کاربران</button><button class="chip" onclick="setAdminTab(&quot;activation&quot;)">کدهای فعال‌سازی</button></div>'+(tab==='report'?'<button class="btn dl" onclick="docFinal()">📄 گزارش نهایی بایگانی</button>':'')+'<div id="ab"></div>';tab==='report'?reportView():tab==='orders'?ordersView():tab==='products'?productsView():tab==='master'?masterView():tab==='activation'?activationAdminView():tab==='feedback'?feedbackView():ordersView();if(tab!=='activation')startPoll()}
 function feedbackView(){
  var box=$('ab');if(!box)return;box.innerHTML='<p class="mu">در حال دریافت بازخورد کاربران…</p>';
  api('shop_app_feedback?select=id,rating,feedback_type,message,status,admin_note,summary,archived_at,created_at&order=created_at.desc&limit=250').then(function(rows){
@@ -444,7 +428,7 @@ function ordersView(){
    else if(o.status==='approved')a='<span class="tag d">تأییدشده؛ در انتظار تکمیل تحویل</span><button class="dlbtn" onclick="finalizeDelivery('+i+')">ثبت تحویل و تکمیل سفارش</button>';
    else if(o.status==='done')a='<span class="tag c">✓ تکمیل‌شده</span>';
    else a='<span class="tag">لغو شده</span>';
-   return '<div class="ar"><b>'+esc(o.customer_name)+'</b><div class="mu">کد سفارش: <b dir="ltr">'+esc(o.tracking_code||'')+'</b> · کد اشتراک: <b dir="ltr">'+esc(o.subscription_code||'—')+'</b></div><div class="mu">شماره تماس: <b dir="ltr">'+esc(o.phone||'')+'</b> · '+esc(o.address||'')+'</div>'+(Array.isArray(o.items)?o.items:[]).map(function(x){return '<div>• '+(x.sku?'<b dir="ltr">['+esc(x.sku)+']</b> ':'')+esc(x.name)+' × '+f(x.qty)+' '+esc(x.unit||'')+' · '+pr(Number(x.price||0)*Number(x.qty||0))+'</div>'}).join('')+'<div class="tot">'+pr(o.total)+'</div><div class="acts">'+a+(o.status==='shipping'?'<button onclick="cancelOrder('+i+')">لغو سفارش</button>':'')+'<button onclick="deleteOrder('+i+')">🗑️ حذف دائمی سفارش</button></div></div>'
+   return '<div class="ar"><b>'+esc(o.customer_name)+'</b><div class="mu">کد سفارش: <b dir="ltr">'+esc(o.tracking_code||'')+'</b></div><div class="mu">شماره تماس: <b dir="ltr">'+esc(o.phone||'')+'</b> · '+esc(o.address||'')+'</div>'+(Array.isArray(o.items)?o.items:[]).map(function(x){return '<div>• '+(x.sku?'<b dir="ltr">['+esc(x.sku)+']</b> ':'')+esc(x.name)+' × '+f(x.qty)+' '+esc(x.unit||'')+' · '+pr(Number(x.price||0)*Number(x.qty||0))+'</div>'}).join('')+'<div class="tot">'+pr(o.total)+'</div><div class="acts">'+a+(o.status==='shipping'?'<button onclick="cancelOrder('+i+')">لغو سفارش</button>':'')+'<button onclick="deleteOrder('+i+')">🗑️ حذف دائمی سفارش</button></div></div>'
   }).join(''):'<p class="mu">هنوز سفارشی ثبت نشده است.</p>';
   badge(O.filter(function(o){return o.status==='shipping'}).length)
  }).catch(fail)
@@ -470,7 +454,7 @@ function reportView(){
   function card(o){
    var i=O.indexOf(o),items=Array.isArray(o.items)?o.items:[],deliveryAction='';
    if(o.status==='approved')deliveryAction='<button class="dlbtn" onclick="finalizeDelivery('+i+')">ثبت تحویل و تکمیل سفارش</button>';
-   return '<article class="rpt-order"><div class="rpt-order-head"><b>'+esc(o.customer_name||'مشتری')+'</b><span class="st">'+esc(ST[o.status]||o.status||'نامشخص')+'</span></div><div class="rpt-meta">کد سفارش: <b dir="ltr">'+esc(o.tracking_code||'—')+'</b> · کد اشتراک: <b dir="ltr">'+esc(o.subscription_code||'—')+'</b></div><div class="rpt-meta">شماره تماس: <b dir="ltr">'+esc(o.phone||'')+'</b> · '+dt(o.created_at)+'</div><div class="rpt-meta">'+esc(o.address||'')+'</div>'+items.map(function(x){return '<div class="rpt-item">• '+(x.sku?'<b dir="ltr">['+esc(x.sku)+']</b> ':'')+esc(x.name)+' × '+f(x.qty)+' '+esc(x.unit||'')+' · '+pr(Number(x.qty||0)*Number(x.price||0))+'</div>'}).join('')+'<div class="rpt-total">مبلغ سفارش: '+pr(o.total)+'</div><div class="acts"><button onclick="docOrder('+i+')">📄 مشاهده گزارش سفارش (PDF)</button><button onclick="rptEditOpen('+i+')">✏️ ویرایش اطلاعات</button>'+deliveryAction+'<button onclick="rptArchive('+i+')">🗃️ بایگانی گزارش</button><button onclick="deleteOrder('+i+')">🗑️ حذف دائمی گزارش و سفارش</button></div><div id="rptedit_'+i+'" class="ar" style="display:none"><b>ویرایش گزارش</b><label>نام مشتری</label><input id="rpt_name_'+i+'" value="'+esc(o.customer_name||'')+'"><label>شماره تماس</label><input id="rpt_phone_'+i+'" value="'+esc(o.phone||'')+'"><label>نشانی</label><textarea id="rpt_address_'+i+'">'+esc(o.address||'')+'</textarea><button class="btn" onclick="rptSaveEdit('+i+')">ذخیره</button></div></article>'
+   return '<article class="rpt-order"><div class="rpt-order-head"><b>'+esc(o.customer_name||'مشتری')+'</b><span class="st">'+esc(ST[o.status]||o.status||'نامشخص')+'</span></div><div class="rpt-meta">کد سفارش: <b dir="ltr">'+esc(o.tracking_code||'—')+'</b></div><div class="rpt-meta">شماره تماس: <b dir="ltr">'+esc(o.phone||'')+'</b> · '+dt(o.created_at)+'</div><div class="rpt-meta">'+esc(o.address||'')+'</div>'+items.map(function(x){return '<div class="rpt-item">• '+(x.sku?'<b dir="ltr">['+esc(x.sku)+']</b> ':'')+esc(x.name)+' × '+f(x.qty)+' '+esc(x.unit||'')+' · '+pr(Number(x.qty||0)*Number(x.price||0))+'</div>'}).join('')+'<div class="rpt-total">مبلغ سفارش: '+pr(o.total)+'</div><div class="acts"><button onclick="docOrder('+i+')">📄 مشاهده گزارش سفارش (PDF)</button><button onclick="rptEditOpen('+i+')">✏️ ویرایش اطلاعات</button>'+deliveryAction+'<button onclick="rptArchive('+i+')">🗃️ بایگانی گزارش</button><button onclick="deleteOrder('+i+')">🗑️ حذف دائمی گزارش و سفارش</button></div><div id="rptedit_'+i+'" class="ar" style="display:none"><b>ویرایش گزارش</b><label>نام مشتری</label><input id="rpt_name_'+i+'" value="'+esc(o.customer_name||'')+'"><label>شماره تماس</label><input id="rpt_phone_'+i+'" value="'+esc(o.phone||'')+'"><label>نشانی</label><textarea id="rpt_address_'+i+'">'+esc(o.address||'')+'</textarea><button class="btn" onclick="rptSaveEdit('+i+')">ذخیره</button></div></article>'
   }
   function group(t,cl,a){return '<section class="rpt-group '+cl+'"><div class="rpt-group-head"><b>'+t+'</b><strong>'+f(a.length)+'</strong></div>'+(a.length?a.map(card).join(''):'<p class="rpt-empty">سفارشی وجود ندارد.</p>')+'</section>'}
   var h='<div class="rpt-intro"><b>گزارش و بایگانی سفارش‌ها</b><p>سفارش پس از ثبت در انتظار تأیید مدیر قرار می‌گیرد. مدیر پس از بررسی سفارش، آن را تأیید می‌کند و هنگام تحویل کالا، سفارش را تکمیل می‌کند. مشتری فقط می‌تواند وضعیت سفارش را پیگیری کند.</p></div><div class="rpt-summary"><div class="rpt-count-card rpt-amber"><b>در انتظار تأیید مدیر</b><strong>'+f(pending.length)+'</strong><small>بررسی سفارش توسط مدیر</small></div><div class="rpt-count-card rpt-blue"><b>تأییدشده؛ در انتظار تحویل</b><strong>'+f(approved.length)+'</strong><small>ثبت تحویل و تکمیل توسط مدیر</small></div><div class="rpt-count-card rpt-green"><b>تکمیل‌شده</b><strong>'+f(done.length)+'</strong><small>تحویل در سامانه ثبت شده است</small></div></div>';
@@ -478,91 +462,6 @@ function reportView(){
   if(cancelled.length)h+=group('سفارش‌های لغوشده','rpt-red',cancelled);
   $('ab').innerHTML=h
  }).catch(fail)
-}
-var CUSTOMERS=[],CUSTOMER_ORDERS=[],CUSTOMER_STATS={},CUSTOMER_GROUP_SETTINGS={active_days:90,loyal_min_orders:3,bulk_min_total_toman:null};
-var CUSTOMER_GROUPS=['مشتری فعال','مشتری جزئی','مشتری دائمی','مشتری عمده','شرکت ها','پروژه ها','بازاریاب','سایر'];
-function customerPhoneKey(v){return toEn(String(v||'')).replace(/[^0-9]/g,'')}
-function customerBuildStats(){
- CUSTOMER_STATS={};
- CUSTOMERS.forEach(function(c){
-  var s={count:0,total:0,last:null},phone=customerPhoneKey(c.phone);
-  CUSTOMER_ORDERS.forEach(function(o){
-   if(o.status==='cancelled')return;
-   var match=o.customer_id?o.customer_id===c.id:(phone&&customerPhoneKey(o.phone)===phone);
-   if(!match)return;
-   s.count+=1;s.total+=Number(o.total||0);
-   var date=o.created_at?new Date(o.created_at):null;
-   if(date&&!isNaN(date.getTime())&&(!s.last||date>s.last))s.last=date;
-  });
-  CUSTOMER_STATS[c.id]=s;
- });
-}
-function customerAutoGroup(c){
- var s=CUSTOMER_STATS[c.id]||{count:0,total:0,last:null},days=CUSTOMER_GROUP_SETTINGS.active_days||90;
- if(CUSTOMER_GROUP_SETTINGS.bulk_min_total_toman&&s.total>=Number(CUSTOMER_GROUP_SETTINGS.bulk_min_total_toman))return 'مشتری عمده';
- if(s.count>=Number(CUSTOMER_GROUP_SETTINGS.loyal_min_orders||3))return 'مشتری دائمی';
- if(s.last&&((Date.now()-s.last.getTime())/86400000)<=days)return 'مشتری فعال';
- if(s.count>0)return 'مشتری جزئی';
- return 'سایر';
-}
-function customerCurrentGroup(c){return c.customer_group_manual?(c.customer_group||'سایر'):customerAutoGroup(c)}
-function customerGroupClass(g){return {'مشتری فعال':'cg-active','مشتری جزئی':'cg-small','مشتری دائمی':'cg-loyal','مشتری عمده':'cg-bulk','شرکت ها':'cg-company','پروژه ها':'cg-project','بازاریاب':'cg-marketer','سایر':'cg-other'}[g]||'cg-other'}
-function customersView(){
- $('ab').innerHTML='<div class="rpt-intro"><b>بانک اطلاعات مشتریان</b><p>پرونده مشتریان به‌صورت خودکار از فرم سفارش ایجاد می‌شود. آمار از سفارش‌های ثبت‌شده محاسبه می‌شود و مدیر می‌تواند گروه و مشخصات هر مشتری را ویرایش کند.</p></div>'+
- '<div class="customer-settings"><b>تنظیم معیارهای دسته‌بندی خودکار</b><div class="g"><label>فعال بودن در چند روز اخیر<input id="cgActiveDays" type="number" min="1" max="3650" value="90"></label><label>حداقل سفارش برای مشتری دائمی<input id="cgLoyalOrders" type="number" min="2" max="10000" value="3"></label><label style="grid-column:1/-1">حداقل مجموع خرید برای مشتری عمده (تومان)<input id="cgBulkTotal" type="number" min="1" placeholder="برای غیرفعال ماندن خالی بگذارید"></label></div><button class="btn" onclick="customerSettingsSave()">ذخیره معیارها</button><p class="mu">مشتری فعال: سفارش در بازه تعیین‌شده · دائمی: حداقل تعداد سفارش · عمده: مجموع مبلغ سفارش‌ها به حد تعیین‌شده. گروه شرکت‌ها، پروژه‌ها و بازاریاب با انتخاب مدیر تعیین می‌شوند.</p></div>'+
- '<input id="customerSearch" placeholder="جستجو با نام، شماره تماس، کد اشتراک یا گروه" oninput="filterCustomers()"><div id="customerList">در حال دریافت…</div>';
- Promise.all([
-  api('shop_customers?select=id,subscription_code,full_name,phone,phone_normalized,last_address,created_at,customer_group,customer_group_manual&order=created_at.desc&limit=2000'),
-  api('shop_orders?select=id,customer_id,phone,total,status,created_at&limit=5000'),
-  api('shop_settings?select=customer_active_days,customer_loyal_min_orders,customer_bulk_min_total_toman&id=eq.1')
- ]).then(function(r){
-  CUSTOMERS=r[0]||[];CUSTOMER_ORDERS=r[1]||[];
-  if(r[2]&&r[2][0])CUSTOMER_GROUP_SETTINGS={active_days:r[2][0].customer_active_days,loyal_min_orders:r[2][0].customer_loyal_min_orders,bulk_min_total_toman:r[2][0].customer_bulk_min_total_toman};
-  $('cgActiveDays').value=CUSTOMER_GROUP_SETTINGS.active_days||90;
-  $('cgLoyalOrders').value=CUSTOMER_GROUP_SETTINGS.loyal_min_orders||3;
-  $('cgBulkTotal').value=CUSTOMER_GROUP_SETTINGS.bulk_min_total_toman||'';
-  customerBuildStats();filterCustomers();
- }).catch(function(e){$('customerList').innerHTML='<p class="err">دریافت بانک مشتریان یا آمار سفارش‌ها ناموفق بود: '+esc(errMsg(e)||'دسترسی مدیر و اتصال را بررسی کنید')+'</p>'});
-}
-function customerSettingsSave(){
- var days=Number(val('cgActiveDays')),loyal=Number(val('cgLoyalOrders')),bulkRaw=val('cgBulkTotal').trim(),bulk=bulkRaw===''?null:Number(bulkRaw);
- if(!Number.isInteger(days)||days<1||days>3650||!Number.isInteger(loyal)||loyal<2||loyal>10000||(bulk!==null&&(!Number.isFinite(bulk)||bulk<=0))){alert('معیارها را به‌درستی وارد کنید.');return}
- api('shop_settings?id=eq.1',{method:'PATCH',prefer:'return=representation',body:{customer_active_days:days,customer_loyal_min_orders:loyal,customer_bulk_min_total_toman:bulk}})
- .then(function(d){if(!d||!d.length)throw new Error('تنظیمات ذخیره نشد');CUSTOMER_GROUP_SETTINGS={active_days:d[0].customer_active_days,loyal_min_orders:d[0].customer_loyal_min_orders,bulk_min_total_toman:d[0].customer_bulk_min_total_toman};filterCustomers();alert('معیارهای دسته‌بندی ذخیره شد.')})
- .catch(function(e){alert('ذخیره معیارها انجام نشد: '+(errMsg(e)||'دسترسی مدیر را بررسی کنید'))});
-}
-function customerSaveGroup(id){
- var group=val('customerGroup_'+id);
- if(CUSTOMER_GROUPS.indexOf(group)<0)return alert('گروه انتخاب‌شده معتبر نیست.');
- api('shop_customers?id=eq.'+encodeURIComponent(id),{method:'PATCH',prefer:'return=representation',body:{customer_group:group,customer_group_manual:true}})
- .then(function(d){if(!d||!d.length)throw new Error('تغییری ذخیره نشد');var c=CUSTOMERS.filter(function(x){return x.id===id})[0];if(c){c.customer_group=group;c.customer_group_manual=true}filterCustomers();alert('گروه مشتری ذخیره شد.')})
- .catch(function(e){alert('ذخیره گروه انجام نشد: '+(errMsg(e)||'دسترسی مدیر را بررسی کنید'))});
-}
-function customerAutoReset(id){
- if(!confirm('گروه این مشتری بر اساس تعداد و مبلغ سفارش‌ها به‌صورت خودکار تعیین شود؟'))return;
- api('shop_customers?id=eq.'+encodeURIComponent(id),{method:'PATCH',prefer:'return=representation',body:{customer_group:'سایر',customer_group_manual:false}})
- .then(function(d){if(!d||!d.length)throw new Error('تغییری ذخیره نشد');var c=CUSTOMERS.filter(function(x){return x.id===id})[0];if(c){c.customer_group='سایر';c.customer_group_manual=false}filterCustomers();alert('دسته‌بندی خودکار فعال شد.')})
- .catch(function(e){alert('تغییر گروه انجام نشد: '+(errMsg(e)||'دسترسی مدیر را بررسی کنید'))});
-}
-function customerSaveDetails(id){
- var c=CUSTOMERS.filter(function(x){return x.id===id})[0];if(!c)return;
- var name=val('customerName_'+id).trim(),phone=toEn(val('customerPhone_'+id).trim()),address=val('customerAddress_'+id).trim(),normalized=customerPhoneKey(phone);
- if(!name||name.length>120||normalized.length<10||normalized.length>15||address.length>500){alert('نام، شماره موبایل یا نشانی معتبر نیست.');return}
- api('shop_customers?id=eq.'+encodeURIComponent(id),{method:'PATCH',prefer:'return=representation',body:{full_name:name,phone:phone,phone_normalized:normalized,last_address:address}})
- .then(function(d){if(!d||!d.length)throw new Error('تغییری ذخیره نشد');Object.assign(c,d[0]);customerBuildStats();filterCustomers();alert('مشخصات مشتری ویرایش شد.')})
- .catch(function(e){alert('ویرایش مشخصات انجام نشد: '+(errMsg(e)||'شماره موبایل تکراری یا خطای دسترسی'))});
-}
-function filterCustomers(){
- var q=val('customerSearch').trim().toLowerCase();
- var a=CUSTOMERS.filter(function(c){return [c.full_name,c.phone,c.subscription_code,c.last_address,customerCurrentGroup(c)].join(' ').toLowerCase().includes(q)});
- $('customerList').innerHTML=a.length?a.map(function(c){
-  var s=CUSTOMER_STATS[c.id]||{count:0,total:0,last:null},g=customerCurrentGroup(c),opts=CUSTOMER_GROUPS.map(function(x){return '<option value="'+esc(x)+'"'+(x===g?' selected':'')+'>'+esc(x)+'</option>'}).join('');
-  return '<article class="ar customer-card"><div class="customer-head"><b>'+esc(c.full_name||'بدون نام')+'</b><span class="customer-badge '+customerGroupClass(g)+'">'+esc(g)+'</span></div>'+
-   '<div class="customer-stats"><div><small>تعداد سفارش</small><b>'+f(s.count)+'</b></div><div><small>مجموع خرید</small><b>'+pr(s.total)+'</b></div><div><small>آخرین سفارش</small><b>'+dt(s.last?s.last.toISOString():null)+'</b></div></div>'+
-   '<div class="mu">موبایل: <b dir="ltr">'+esc(c.phone||'')+'</b> · کد اشتراک: <b dir="ltr">'+esc(c.subscription_code||'—')+'</b></div>'+
-   '<label class="mu">انتخاب گروه مشتری</label><select id="customerGroup_'+esc(c.id)+'">'+opts+'</select><div class="acts"><button onclick="customerSaveGroup(\''+esc(c.id)+'\')">ثبت گروه انتخاب‌شده</button><button onclick="customerAutoReset(\''+esc(c.id)+'\')">بازگشت به دسته‌بندی خودکار</button></div>'+
-   '<details class="customer-edit"><summary>ویرایش مشخصات مشتری</summary><label>نام مشتری</label><input id="customerName_'+esc(c.id)+'" value="'+esc(c.full_name||'')+'"><label>شماره موبایل</label><input id="customerPhone_'+esc(c.id)+'" type="tel" dir="ltr" value="'+esc(c.phone||'')+'"><label>نشانی</label><textarea id="customerAddress_'+esc(c.id)+'" rows="2">'+esc(c.last_address||'')+'</textarea><button class="btn" onclick="customerSaveDetails(\''+esc(c.id)+'\')">ذخیره مشخصات</button></details></article>';
- }).join(''):'<p class="mu">مشتری‌ای پیدا نشد.</p>';
 }
 function rptEditOpen(i){
  if(!token||!managerAccess)return;
@@ -650,7 +549,7 @@ function ensureHtml2Pdf(){
 function docOrder(i){
  if(!token||!managerAccess||!O[i])return;var o=O[i],items=Array.isArray(o.items)?o.items:[];
  var rows=items.map(function(x,n){return '<tr><td>'+f(n+1)+'</td><td dir="ltr">'+esc(x.sku||'—')+'</td><td>'+esc(x.name)+'</td><td>'+esc(x.unit||'')+'</td><td>'+f(x.qty)+'</td><td>'+pr(x.price)+'</td><td>'+pr(Number(x.price||0)*Number(x.qty||0))+'</td></tr>'}).join('');
- var report='<div id="orderPdfSource" dir="rtl" style="width:100%;max-width:780px;margin:12px auto;padding:18px;background:#fff;color:#111;font-family:Vazirmatn,Tahoma,sans-serif;font-size:13px;line-height:1.9;border:1px solid #ddd">'+docHead('گزارش سفارش کالا')+'<p style="font-size:11px;color:#444">قیمت‌های این سند، قیمت ثبت‌شده هنگام ثبت سفارش هستند.</p><table style="width:100%;border-collapse:collapse"><tr><td>کد سفارش</td><td dir="ltr"><b>'+esc(o.tracking_code||'')+'</b></td><td>تاریخ ثبت</td><td>'+dt(o.created_at)+'</td></tr><tr><td>وضعیت</td><td>'+esc(ST[o.status]||o.status||'')+'</td><td>مبلغ کل</td><td><b>'+pr(o.total)+'</b></td></tr><tr><td>نام مشتری</td><td>'+esc(o.customer_name||'')+'</td><td>شماره تماس</td><td dir="ltr">'+esc(o.phone||'')+'</td></tr><tr><td>کد اشتراک</td><td dir="ltr">'+esc(o.subscription_code||'—')+'</td><td>نشانی</td><td>'+esc(o.address||'')+'</td></tr></table><br><table style="width:100%;border-collapse:collapse"><tr><th>ردیف</th><th>SKU</th><th>نام کالا</th><th>واحد</th><th>تعداد</th><th>قیمت واحد</th><th>مبلغ ردیف</th></tr>'+rows+'<tr><td colspan="6"><b>جمع کل سفارش</b></td><td><b>'+pr(o.total)+'</b></td></tr></table>'+docFoot()+'</div>';
+ var report='<div id="orderPdfSource" dir="rtl" style="width:100%;max-width:780px;margin:12px auto;padding:18px;background:#fff;color:#111;font-family:Vazirmatn,Tahoma,sans-serif;font-size:13px;line-height:1.9;border:1px solid #ddd">'+docHead('گزارش سفارش کالا')+'<p style="font-size:11px;color:#444">قیمت‌های این سند، قیمت ثبت‌شده هنگام ثبت سفارش هستند.</p><table style="width:100%;border-collapse:collapse"><tr><td>کد سفارش</td><td dir="ltr"><b>'+esc(o.tracking_code||'')+'</b></td><td>تاریخ ثبت</td><td>'+dt(o.created_at)+'</td></tr><tr><td>وضعیت</td><td>'+esc(ST[o.status]||o.status||'')+'</td><td>مبلغ کل</td><td><b>'+pr(o.total)+'</b></td></tr><tr><td>نام مشتری</td><td>'+esc(o.customer_name||'')+'</td><td>شماره تماس</td><td dir="ltr">'+esc(o.phone||'')+'</td></tr><tr><td>نشانی</td><td>'+esc(o.address||'')+'</td></tr></table><br><table style="width:100%;border-collapse:collapse"><tr><th>ردیف</th><th>SKU</th><th>نام کالا</th><th>واحد</th><th>تعداد</th><th>قیمت واحد</th><th>مبلغ ردیف</th></tr>'+rows+'<tr><td colspan="6"><b>جمع کل سفارش</b></td><td><b>'+pr(o.total)+'</b></td></tr></table>'+docFoot()+'</div>';
  $('in').innerHTML='<div class="row"><b>گزارش سفارش (PDF)</b><button class="link" onclick="closeSh()">بستن</button></div><p class="mu">گزارش سفارش فقط در پنل مدیر نمایش داده می‌شود.</p><div id="orderPdfFrame" style="width:100%;height:65vh;min-height:360px;background:#eee;border:1px solid var(--bd);border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center">در حال ساخت PDF…</div><div id="orderPdfDownload" style="margin-top:8px"></div>'+report;
  var source=$('orderPdfSource');$('orderPdfFrame').textContent='در حال آماده‌سازی فایل PDF…';
  ensureHtml2Pdf().then(function(){if(!$('orderPdfFrame'))return;return html2pdf().set({margin:8,filename:'barqyar-order-'+String(o.tracking_code||o.id)+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:1.5,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(source).outputPdf('blob').then(function(blob){if(!$('orderPdfFrame'))return;if(orderPdfUrl)URL.revokeObjectURL(orderPdfUrl);orderPdfUrl=URL.createObjectURL(blob);$('orderPdfFrame').innerHTML='<iframe title="گزارش سفارش PDF" src="'+orderPdfUrl+'" style="width:100%;height:100%;border:0;background:#fff"></iframe>';source.style.display='none';$('orderPdfDownload').innerHTML='<a class="btn dl" href="'+orderPdfUrl+'" download="barqyar-order-'+esc(o.tracking_code||o.id)+'.pdf">⬇️ دریافت فایل PDF</a>'}).catch(function(e){console.error('PDF error',e);$('orderPdfFrame').textContent='ساخت PDF ناموفق بود؛ نسخه چاپی را به PDF ذخیره کنید.';$('orderPdfDownload').innerHTML='<button class="btn" onclick="printOrderFallback()">چاپ / ذخیره PDF</button>'})})
