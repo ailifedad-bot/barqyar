@@ -30,7 +30,7 @@ function submitActivation(){
  if(!code){if(m)m.textContent='کد فعال‌سازی را وارد کنید.';return}
  if(m)m.textContent='در حال بررسی کد…';
  api('rpc/shop_redeem_activation',{method:'POST',body:{p_code:code,p_device_id:di.id,p_device_secret:di.secret}})
- .then(function(r){if(!r||r.ok!==true)throw new Error('فعال‌سازی تأیید نشد');activationUnlocked=true;hideActivationGate();if(m)m.textContent='کد فعال‌سازی با موفقیت ثبت شد. دسترسی این دستگاه فعال گردید.';load();startProductRealtime()})
+ .then(function(r){if(!r||r.ok!==true)throw new Error('فعال‌سازی تأیید نشد');activationUnlocked=true;hideActivationGate();load();startProductRealtime();if(mode==='cart')cartView();else if(m)m.textContent='کد فعال‌سازی با موفقیت ثبت شد. دسترسی این دستگاه فعال گردید.'})
  .catch(function(e){if(m)m.textContent=errMsg(e)||'کد معتبر نیست، منقضی شده یا قبلاً استفاده شده است.'})
 }
 function checkDeviceActivation(){
@@ -45,24 +45,31 @@ function initActivation(){
   if(session&&session.access_token){
    token=session.access_token;
    return api('rpc/shop_is_admin').then(function(isAdmin){
-    if(isAdmin===true){managerAccess=true;activationUnlocked=true;hideActivationGate();load();startProductRealtime();return true}
+    if(isAdmin===true){managerAccess=true;activationUnlocked=true;return true}
     managerAccess=false;token=null;
     return adminAuthClient.auth.signOut().then(function(){return false});
    }).catch(function(){managerAccess=false;token=null;return false});
   }
   return false;
  }).then(function(isAdmin){
-  if(isAdmin)return;
+  if(isAdmin){hideActivationGate();load();startProductRealtime();return}
   return checkDeviceActivation().then(function(active){
    activationUnlocked=active;
-   if(active){hideActivationGate();load();startProductRealtime()}
-   else{showActivationGate('برای استفاده از برق‌یار، کد فعال‌سازی رایگان را از مدیر دریافت کنید.')}
+   hideActivationGate();
+   load();
+   startProductRealtime();
   });
+ }).catch(function(e){
+  console.warn('Activation status check failed; public app will still load:',e);
+  activationUnlocked=false;
+  hideActivationGate();
+  load();
+  startProductRealtime();
  });
 }
 function load(){refreshProducts()}
 function refreshProducts(){
- if(managerAccess||!activationUnlocked)return;
+ if(managerAccess)return;
  api('shop_products?select=id,name,category,unit,price,emoji,in_stock,image_url,stock_qty,sku&order=id')
  .then(function(d){
   P=Array.isArray(d)?d:[];
@@ -112,7 +119,7 @@ function cartView(){
  var nm=val('nm'),ph=val('ph'),ad=val('ad');
  $('in').innerHTML='<h3 style="margin:0 0 6px">سبد خرید</h3>'+h+'<div class="tot">جمع کل: '+pr(L.t)+'</div>'+
  '<input id="nm" placeholder="نام و نام خانوادگی" value="'+esc(nm)+'"><label class="order-field-label" for="ph">موبایل مشتری</label><input id="ph" type="tel" inputmode="tel" dir="ltr" placeholder="موبایل مشتری" aria-describedby="phHelp" value="'+esc(ph)+'"><p id="phHelp" class="order-field-help">شماره موبایل را با صفر ابتدایی وارد کنید؛ مثال: <b dir="ltr">۰۹۱۱۳۸۸۹۷۵۹</b></p><textarea id="ad" rows="2" placeholder="آدرس تحویل">'+esc(ad)+'</textarea>'+
- '<div class="cfbox" style="margin:10px 0"><b>راهنمای مشتری</b><p class="mu" style="margin:6px 0">۱) اطلاعات تماس و نشانی را دقیق وارد کنید. ۲) پیام سفارش را در واتس‌اپ یا ایمیل ارسال کنید. ۳) کد پیگیری را نگه دارید. ۴) وضعیت سفارش را از بخش پیگیری مشاهده کنید.</p></div><div class="cfbox" style="margin:10px 0;border:2px solid #b45309;background:rgba(245,158,11,.10)"><b>⚠️ شرایط استفاده و مسئولیت کاربران</b><p class="mu" style="margin:6px 0">کاربر مسئول نحوه استفاده، اطلاعات واردشده و اقداماتی است که از طریق برنامه انجام می‌دهد. خطاها و اشتباهات ناشی از استفاده نادرست یا ناآگاهی از راهنمای برنامه، سوءاستفاده و اقدامات غیرمجاز کاربران بر عهده خود آنان است. هک، دسترسی غیرمجاز و تغییر کدها یا تنظیمات برنامه بدون اجازه، خارج از اختیار و کنترل کاربر مجاز و مدیریت برنامه است؛ مسئولیت اقدامات و خسارات ناشی از آن، در حدودی که قانون اجازه می‌دهد، متوجه عامل آن خواهد بود. این بند مسئولیت‌های قانونی غیرقابل اسقاط مدیر و مالک را حذف نمی‌کند.</p><button class="btn gh" type="button" onclick="openTerms()">مطالعه متن کامل شرایط استفاده</button><label style="display:flex;gap:9px;align-items:flex-start;margin-top:10px;font-size:12px;line-height:1.9"><input id="termsAccepted" type="checkbox" style="width:auto;min-width:18px;margin:3px 0 0"><span>شرایط استفاده، مسئولیت کاربران و محدودیت‌های مربوط به دست‌کاری و دسترسی غیرمجاز را مطالعه کردم و می‌پذیرم.</span></label></div><p id="er" class="err"></p><div id="orderReceipt" class="cfbox" style="display:none;margin:10px 0"></div><p class="mu">روش ارسال سفارش:</p>'+
+ '<div class="cfbox" style="margin:10px 0"><b>راهنمای مشتری</b><p class="mu" style="margin:6px 0">۱) اطلاعات تماس و نشانی را دقیق وارد کنید. ۲) پیام سفارش را در واتس‌اپ یا ایمیل ارسال کنید. ۳) کد پیگیری را نگه دارید. ۴) وضعیت سفارش را از بخش پیگیری مشاهده کنید.</p></div><div class="cfbox" style="margin:10px 0;border:2px solid #b45309;background:rgba(245,158,11,.10)"><b>⚠️ شرایط استفاده و مسئولیت کاربران</b><p class="mu" style="margin:6px 0">کاربر مسئول نحوه استفاده، اطلاعات واردشده و اقداماتی است که از طریق برنامه انجام می‌دهد. خطاها و اشتباهات ناشی از استفاده نادرست یا ناآگاهی از راهنمای برنامه، سوءاستفاده و اقدامات غیرمجاز کاربران بر عهده خود آنان است. هک، دسترسی غیرمجاز و تغییر کدها یا تنظیمات برنامه بدون اجازه، خارج از اختیار و کنترل کاربر مجاز و مدیریت برنامه است؛ مسئولیت اقدامات و خسارات ناشی از آن، در حدودی که قانون اجازه می‌دهد، متوجه عامل آن خواهد بود. این بند مسئولیت‌های قانونی غیرقابل اسقاط مدیر و مالک را حذف نمی‌کند.</p><button class="btn gh" type="button" onclick="openTerms()">مطالعه متن کامل شرایط استفاده</button><label style="display:flex;gap:9px;align-items:flex-start;margin-top:10px;font-size:12px;line-height:1.9"><input id="termsAccepted" type="checkbox" style="width:auto;min-width:18px;margin:3px 0 0"><span>شرایط استفاده، مسئولیت کاربران و محدودیت‌های مربوط به دست‌کاری و دسترسی غیرمجاز را مطالعه کردم و می‌پذیرم.</span></label></div>'+(!activationUnlocked?'<div class="cfbox" style="margin:10px 0;border:2px solid #d97706;background:rgba(245,158,11,.09)"><b>🔐 فعال‌سازی رایگان برای ثبت سفارش</b><p class="mu">مشاهده و شروع برق‌یار بدون کد آزاد است. فقط برای ثبت سفارش، پس از درخواست شما مدیر یک کد یکبارمصرف صادر می‌کند. کد دریافتی را در کادر زیر وارد کنید.</p><a class="btn wa" target="_blank" rel="noopener" href="https://wa.me/'+WA+'?text='+encodeURIComponent('سلام، برای فعال‌سازی رایگان دستگاه در برنامه برق‌یار درخواست کد یکبارمصرف دارم.')+'">درخواست کد از مدیر</a><input id="activationCode" dir="ltr" autocomplete="one-time-code" placeholder="کد یکبارمصرف دریافتی از مدیر" maxlength="36"><button class="btn gh" type="button" onclick="submitActivation()">ثبت کد و فعال‌سازی دستگاه</button><p id="activationMessage" class="activation-message"></p></div>':'<div class="cfbox" style="margin:10px 0;border:1px solid #16a34a"><b>✓ این دستگاه فعال است؛ امکان ثبت سفارش وجود دارد.</b></div>')+'<p id="er" class="err"></p><div id="orderReceipt" class="cfbox" style="display:none;margin:10px 0"></div><p class="mu">روش ارسال سفارش:</p>'+
  '<a class="btn wa" target="_blank" rel="noopener" href="#" onclick="return go(this,\'wa\')">واتس‌اپ</a>'+
  '<a class="btn tg" target="_blank" rel="noopener" href="https://t.me/'+TG+'" onclick="return go(this,\'tg\')">تلگرام (@'+TG+')</a>'+
  '<form method="POST" action="https://formsubmit.co/'+MAIL+'" target="_blank" onsubmit="return go(this,\'mail\')">'+
@@ -140,7 +147,7 @@ function login(){
   });
  }).catch(function(){token=null;managerAccess=false;loginView('تأیید ورود مدیر انجام نشد. اتصال را بررسی و دوباره تلاش کنید.')});
 }
-function logout(){adminAuthClient.auth.signOut().finally(function(){token=null;managerAccess=false;closeSh();checkDeviceActivation().then(function(active){activationUnlocked=active;if(active){hideActivationGate();load();startProductRealtime()}else showActivationGate('برای ادامه استفاده، کد فعال‌سازی رایگان را از مدیر دریافت کنید.')})})}
+function logout(){adminAuthClient.auth.signOut().finally(function(){token=null;managerAccess=false;closeSh();checkDeviceActivation().then(function(active){activationUnlocked=active;hideActivationGate();load();startProductRealtime()}).catch(function(){activationUnlocked=false;hideActivationGate();load();startProductRealtime()})})}
 function fail(e){$('ab').innerHTML='<p class="err">دسترسی ندارید یا خطایی رخ داد. با ایمیل مدیر وارد شوید.</p>'}
 
 function ost(i,s){api('rpc/shop_admin_set_order_status',{method:'POST',body:{p_order_id:O[i].id,p_status:s}}).then(ordersView).catch(function(e){alert(errMsg(e)||'انجام نشد')})}
@@ -330,7 +337,7 @@ function localOrderOptions(){var phone=localPhoneKey(val('trackPhone')),a=[];try
 function renderLocalOrderChoices(){var s=$('trackOrderSelect');if(!s)return;var a=localOrderOptions();s.innerHTML='<option value="">انتخاب کد سفارش شما…</option>'+a.map(function(x){return '<option value="'+esc(x.code)+'">'+esc(x.code)+' — '+esc((x.summary||'سفارش').slice(0,65))+' — '+pr(x.total)+'</option>'}).join('');if(!a.length)s.insertAdjacentHTML('beforeend','<option value="" disabled>سفارشی با این شماره در همین مرورگر ذخیره نشده است</option>')}
 function chooseLocalOrder(){var s=$('trackOrderSelect');if(s&&s.value){$('tc').value=s.value;doTrack()}}
 function openTrackForCurrentOrder(){openTrack();setTimeout(function(){if($('tc')){$('tc').value=code;doTrack()}},250)}
-function go(el,k){if(!$('termsAccepted')||!$('termsAccepted').checked){$('er').className='err';$('er').textContent='برای ادامه ثبت سفارش، ابتدا شرایط استفاده را مطالعه و گزینه پذیرش را فعال کنید.';return false}if(!val('nm').trim()||!val('ph').trim()||!val('ad').trim()){$('er').textContent='لطفاً نام، شماره تماس و نشانی را کامل کنید.';return false}var L=lines();if(!L.n)return false;if(!saved){saved=true;code=genCode();var od={customer_name:val('nm').trim(),phone:toEn(val('ph').trim()),address:val('ad').trim(),items:L.a,total:L.t,tracking_code:code,status:'shipping'};$('er').className='mu';$('er').textContent='در حال ثبت سفارش…';api('shop_orders',{method:'POST',prefer:'return=minimal',keep:1,body:od}).then(function(){rememberLocalOrder(od);showOrderReceipt();$('er').className='okc';$('er').textContent='سفارش با موفقیت در برق‌یار ثبت شد. کد آن در فهرست پیگیری همین مرورگر ذخیره شد.'}).catch(function(e){saved=false;$('er').className='err';$('er').textContent='ثبت سفارش ناموفق بود: '+(errMsg(e)||'اتصال یا اطلاعات را بررسی کنید.')})}var t=orderText();if(k==='wa')el.href='https://wa.me/'+WA+'?text='+encodeURIComponent(t);else if(k==='tg'){try{navigator.clipboard.writeText(t)}catch(e){}}else{$('f_n').value=val('nm');$('f_p').value=val('ph');$('f_a').value=val('ad');$('f_o').value=t;$('f_next').value=returnAppUrl(code);$('f_return').value=returnAppUrl(code)}return true}
+function go(el,k){if(!activationUnlocked){$('er').className='err';$('er').textContent='برای ثبت سفارش، ابتدا کد فعال‌سازی رایگان دستگاه را از مدیر دریافت و در همین صفحه ثبت کنید. مشاهده و استفاده از بخش‌های عمومی برنامه آزاد است.';return false}if(!$('termsAccepted')||!$('termsAccepted').checked){$('er').className='err';$('er').textContent='برای ادامه ثبت سفارش، ابتدا شرایط استفاده را مطالعه و گزینه پذیرش را فعال کنید.';return false}if(!val('nm').trim()||!val('ph').trim()||!val('ad').trim()){$('er').textContent='لطفاً نام، شماره تماس و نشانی را کامل کنید.';return false}var L=lines();if(!L.n)return false;if(!saved){saved=true;code=genCode();var od={customer_name:val('nm').trim(),phone:toEn(val('ph').trim()),address:val('ad').trim(),items:L.a,total:L.t,tracking_code:code,status:'shipping'};$('er').className='mu';$('er').textContent='در حال ثبت سفارش…';api('shop_orders',{method:'POST',prefer:'return=minimal',keep:1,body:od}).then(function(){rememberLocalOrder(od);showOrderReceipt();$('er').className='okc';$('er').textContent='سفارش با موفقیت در برق‌یار ثبت شد. کد آن در فهرست پیگیری همین مرورگر ذخیره شد.'}).catch(function(e){saved=false;$('er').className='err';$('er').textContent='ثبت سفارش ناموفق بود: '+(errMsg(e)||'اتصال یا اطلاعات را بررسی کنید.')})}var t=orderText();if(k==='wa')el.href='https://wa.me/'+WA+'?text='+encodeURIComponent(t);else if(k==='tg'){try{navigator.clipboard.writeText(t)}catch(e){}}else{$('f_n').value=val('nm');$('f_p').value=val('ph');$('f_a').value=val('ad');$('f_o').value=t;$('f_next').value=returnAppUrl(code);$('f_return').value=returnAppUrl(code)}return true}
 function openTrack(){show('track');var hc=new URLSearchParams(location.search).get('track')||'';$('in').innerHTML='<h3 style="margin:0 0 8px">پیگیری سفارش</h3><div class="track-guide">🔎 برای مشاهده وضعیت، شماره موبایلی را وارد کنید که سفارش را با آن ثبت کرده‌اید؛ سپس کد همان سفارش را از فهرست انتخاب کنید.</div><label>شماره موبایل ثبت‌شده در سفارش</label><input id="trackPhone" type="tel" inputmode="tel" dir="ltr" placeholder="مثلاً 0912…" oninput="renderLocalOrderChoices()"><label>سفارش‌های ثبت‌شده در این مرورگر</label><select id="trackOrderSelect" onchange="chooseLocalOrder()"><option value="">ابتدا شماره موبایل را وارد کنید</option></select><p class="mu">با انتخاب هر سفارش، کد یکتای همان سفارش در کادر پیگیری قرار می‌گیرد.</p><label>کد یکتای سفارش</label><input id="tc" placeholder="کد پیگیری سفارش" dir="ltr" autocomplete="off" value="'+esc(hc)+'"><button class="btn" onclick="doTrack()">نمایش وضعیت سفارش</button><div id="tr" style="margin-top:10px"></div>';if(hc){setTimeout(function(){if($('tc'))doTrack()},0)}}
 function doTrack(){
  var c=val('tc').trim().toUpperCase();
@@ -392,7 +399,7 @@ function feedbackArchive(i){var x=AF[i];if(!x)return;var summary=val('fbSummary_
 function feedbackUnarchive(i){var x=AF[i];if(!x)return;api('shop_app_feedback?id=eq.'+encodeURIComponent(x.id),{method:'PATCH',prefer:'return=minimal',body:{archived_at:null}}).then(function(){feedbackView()}).catch(function(e){alert('بازگردانی انجام نشد: '+(errMsg(e)||'دسترسی مدیر را بررسی کنید.'))})}
 function feedbackDelete(i){var x=AF[i];if(!x||!confirm('بازخورد #'+x.id+' برای همیشه حذف شود؟ این کار برگشت‌پذیر نیست.'))return;api('shop_app_feedback?id=eq.'+encodeURIComponent(x.id),{method:'DELETE',prefer:'return=minimal'}).then(function(){feedbackView()}).catch(function(e){alert('حذف انجام نشد: '+(errMsg(e)||'دسترسی مدیر را بررسی کنید.'))})}
 function activationAdminView(){
- $('ab').innerHTML='<div class="ar"><b>صدور کد فعال‌سازی یک‌بارمصرف</b><p class="mu">هر کد فقط برای یک دستگاه و یک‌بار قابل استفاده است. پس از فعال‌سازی، دسترسی روی همان مرورگر باقی می‌ماند تا مدیر آن را لغو کند.</p><label>اعتبار کد برای فعال‌سازی</label><select id="activationDays"><option value="7">۷ روز</option><option value="30" selected>۳۰ روز (پیشنهادی)</option><option value="90">۹۰ روز</option><option value="180">۱۸۰ روز</option><option value="365">۳۶۵ روز</option></select><button class="btn" onclick="activationCreateCode()">＋ ایجاد کد جدید</button><div id="activationNewCode"></div></div><div class="ar"><div class="row"><b>فهرست کدها و دستگاه‌ها</b><button class="link" onclick="activationRefresh()">بروزرسانی</button></div><div id="activationList" class="mu">در حال دریافت…</div></div>';
+ $('ab').innerHTML='<div class="ar"><b>صدور کد فعال‌سازی یک‌بارمصرف</b><p class="mu">کد فقط پس از دریافت درخواست کاربر و به‌صورت دستی توسط مدیر صادر می‌شود. هر کد فقط یک‌بار و برای یک دستگاه قابل استفاده است؛ مشاهده و شروع برنامه به کد نیاز ندارد. مدیر می‌تواند دسترسی دستگاه را لغو کند.</p><label>اعتبار کد برای فعال‌سازی</label><select id="activationDays"><option value="7">۷ روز</option><option value="30" selected>۳۰ روز (پیشنهادی)</option><option value="90">۹۰ روز</option><option value="180">۱۸۰ روز</option><option value="365">۳۶۵ روز</option></select><button class="btn" onclick="activationCreateCode()">＋ ایجاد کد جدید</button><div id="activationNewCode"></div></div><div class="ar"><div class="row"><b>فهرست کدها و دستگاه‌ها</b><button class="link" onclick="activationRefresh()">بروزرسانی</button></div><div id="activationList" class="mu">در حال دریافت…</div></div>';
  activationRefresh();
 }
 function activationCreateCode(){
