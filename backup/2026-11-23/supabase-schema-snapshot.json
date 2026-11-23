@@ -1,0 +1,1845 @@
+{
+  "tables": [
+    {
+      "table": "shop_price_cron_auth",
+      "schema": "private",
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "token_hash",
+          "type": "bytea",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX shop_price_cron_auth_pkey ON private.shop_price_cron_auth USING btree (id)"
+      ],
+      "force_rls": false,
+      "constraints": [
+        {
+          "name": "shop_price_cron_auth_id_check",
+          "definition": "CHECK (id = 1)"
+        },
+        {
+          "name": "shop_price_cron_auth_pkey",
+          "definition": "PRIMARY KEY (id)"
+        }
+      ],
+      "rls_enabled": false
+    },
+    {
+      "table": "shop_activation_codes",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "code_hash",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "code_hint",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "redeemed_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "redeemed_device_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "created_by",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX shop_activation_codes_pkey ON public.shop_activation_codes USING btree (id)",
+        "CREATE UNIQUE INDEX shop_activation_codes_code_hash_key ON public.shop_activation_codes USING btree (code_hash)",
+        "CREATE INDEX shop_activation_codes_created_at_idx ON public.shop_activation_codes USING btree (created_at DESC)"
+      ],
+      "force_rls": false,
+      "constraints": [
+        {
+          "name": "shop_activation_codes_code_hash_key",
+          "definition": "UNIQUE (code_hash)"
+        },
+        {
+          "name": "shop_activation_codes_pkey",
+          "definition": "PRIMARY KEY (id)"
+        }
+      ],
+      "rls_enabled": true
+    },
+    {
+      "table": "shop_activations",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "device_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "secret_hash",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "activation_code_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "activated_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX shop_activations_pkey ON public.shop_activations USING btree (device_id)",
+        "CREATE INDEX shop_activations_code_idx ON public.shop_activations USING btree (activation_code_id)"
+      ],
+      "force_rls": false,
+      "constraints": [
+        {
+          "name": "shop_activations_activation_code_id_fkey",
+          "definition": "FOREIGN KEY (activation_code_id) REFERENCES shop_activation_codes(id)"
+        },
+        {
+          "name": "shop_activations_pkey",
+          "definition": "PRIMARY KEY (device_id)"
+        }
+      ],
+      "rls_enabled": true
+    },
+    {
+      "table": "shop_admins",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "email",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "role",
+          "type": "text",
+          "default": "'admin'::text",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "is_primary",
+          "type": "boolean",
+          "default": "false",
+          "identity": "",
+          "not_null": true
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX shop_admins_pkey ON public.shop_admins USING btree (email)",
+        "CREATE UNIQUE INDEX shop_admins_single_primary_owner_idx ON public.shop_admins USING btree (is_primary) WHERE (is_primary = true)"
+      ],
+      "force_rls": false,
+      "constraints": [
+        {
+          "name": "shop_admins_pkey",
+          "definition": "PRIMARY KEY (email)"
+        }
+      ],
+      "rls_enabled": true
+    },
+    {
+      "table": "shop_app_feedback",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "default": null,
+          "identity": "a",
+          "not_null": true
+        },
+        {
+          "name": "rating",
+          "type": "smallint",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "feedback_type",
+          "type": "text",
+          "default": "'general'::text",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "message",
+          "type": "text",
+          "default": "''::text",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "contact_name",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "contact_phone",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "order_code",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "app_version",
+          "type": "text",
+          "default": "'1.0'::text",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "default": "'new'::text",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "admin_note",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "ip_hash",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "summary",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX shop_app_feedback_pkey ON public.shop_app_feedback USING btree (id)",
+        "CREATE INDEX shop_app_feedback_created_at_idx ON public.shop_app_feedback USING btree (created_at DESC)",
+        "CREATE INDEX shop_app_feedback_status_idx ON public.shop_app_feedback USING btree (status, created_at DESC)",
+        "CREATE INDEX shop_app_feedback_ip_created_idx ON public.shop_app_feedback USING btree (ip_hash, created_at DESC)",
+        "CREATE INDEX shop_app_feedback_active_created_idx ON public.shop_app_feedback USING btree (created_at DESC) WHERE (archived_at IS NULL)"
+      ],
+      "force_rls": false,
+      "constraints": [
+        {
+          "name": "shop_app_feedback_admin_note_length_check",
+          "definition": "CHECK (admin_note IS NULL OR char_length(admin_note) <= 2000)"
+        },
+        {
+          "name": "shop_app_feedback_contact_name_length_check",
+          "definition": "CHECK (contact_name IS NULL OR char_length(contact_name) <= 120)"
+        },
+        {
+          "name": "shop_app_feedback_contact_phone_length_check",
+          "definition": "CHECK (contact_phone IS NULL OR char_length(contact_phone) <= 30)"
+        },
+        {
+          "name": "shop_app_feedback_content_check",
+          "definition": "CHECK (rating IS NOT NULL OR length(btrim(message)) > 0)"
+        },
+        {
+          "name": "shop_app_feedback_message_length_check",
+          "definition": "CHECK (char_length(message) <= 2000)"
+        },
+        {
+          "name": "shop_app_feedback_order_code_length_check",
+          "definition": "CHECK (order_code IS NULL OR char_length(order_code) <= 80)"
+        },
+        {
+          "name": "shop_app_feedback_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "shop_app_feedback_rating_check",
+          "definition": "CHECK (rating IS NULL OR rating >= 1 AND rating <= 5)"
+        },
+        {
+          "name": "shop_app_feedback_status_check",
+          "definition": "CHECK (status = ANY (ARRAY['new'::text, 'reviewing'::text, 'resolved'::text, 'closed'::text]))"
+        },
+        {
+          "name": "shop_app_feedback_type_check",
+          "definition": "CHECK (feedback_type = ANY (ARRAY['general'::text, 'bug'::text, 'usability'::text, 'order'::text, 'product'::text, 'suggestion'::text, 'other'::text]))"
+        }
+      ],
+      "rls_enabled": true
+    },
+    {
+      "table": "shop_orders",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "customer_name",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "phone",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "address",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "items",
+          "type": "jsonb",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "total",
+          "type": "numeric",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "default": "'shipping'::text",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "tracking_code",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "uid",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "payment_method",
+          "type": "text",
+          "default": "'cash_on_delivery'::text",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "payment_status",
+          "type": "text",
+          "default": "'unpaid'::text",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "delivery_method",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "shipping_fee",
+          "type": "numeric",
+          "default": "0",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "delivery_note",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "operator_note",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "inventory_deducted",
+          "type": "boolean",
+          "default": "false",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "customer_confirmed_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "delivered_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "delivery_verified",
+          "type": "boolean",
+          "default": "false",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "report_archived_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "report_archived_by",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "admin_approved_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "admin_approved_by",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX shop_orders_pkey ON public.shop_orders USING btree (id)",
+        "CREATE UNIQUE INDEX shop_orders_tracking_code_key ON public.shop_orders USING btree (tracking_code)",
+        "CREATE UNIQUE INDEX shop_orders_tracking_code_uidx ON public.shop_orders USING btree (tracking_code) WHERE (tracking_code IS NOT NULL)",
+        "CREATE INDEX shop_orders_status_created_idx ON public.shop_orders USING btree (status, created_at DESC)",
+        "CREATE INDEX shop_orders_active_reports_created_at_idx ON public.shop_orders USING btree (created_at DESC) WHERE (report_archived_at IS NULL)",
+        "CREATE INDEX shop_orders_phone_created_at_idx ON public.shop_orders USING btree (phone, created_at DESC)"
+      ],
+      "force_rls": false,
+      "constraints": [
+        {
+          "name": "shop_orders_address_check",
+          "definition": "CHECK (char_length(address) >= 1 AND char_length(address) <= 500)"
+        },
+        {
+          "name": "shop_orders_customer_name_check",
+          "definition": "CHECK (char_length(customer_name) >= 1 AND char_length(customer_name) <= 120)"
+        },
+        {
+          "name": "shop_orders_delivery_method_check",
+          "definition": "CHECK (delivery_method IS NULL OR (delivery_method = ANY (ARRAY['motorcycle'::text, 'van'::text, 'post'::text, 'carrier'::text])))"
+        },
+        {
+          "name": "shop_orders_items_check",
+          "definition": "CHECK (jsonb_typeof(items) = 'array'::text AND jsonb_array_length(items) >= 1 AND jsonb_array_length(items) <= 100)"
+        },
+        {
+          "name": "shop_orders_payment_method_check",
+          "definition": "CHECK (payment_method = ANY (ARRAY['cash_on_delivery'::text, 'card_transfer_on_delivery'::text]))"
+        },
+        {
+          "name": "shop_orders_payment_status_check",
+          "definition": "CHECK (payment_status = ANY (ARRAY['unpaid'::text, 'paid'::text]))"
+        },
+        {
+          "name": "shop_orders_phone_check",
+          "definition": "CHECK (char_length(phone) >= 5 AND char_length(phone) <= 30)"
+        },
+        {
+          "name": "shop_orders_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "shop_orders_shipping_fee_check",
+          "definition": "CHECK (shipping_fee >= 0::numeric)"
+        },
+        {
+          "name": "shop_orders_status_check",
+          "definition": "CHECK (status = ANY (ARRAY['shipping'::text, 'approved'::text, 'done'::text, 'cancelled'::text]))"
+        },
+        {
+          "name": "shop_orders_total_check",
+          "definition": "CHECK (total >= 0::numeric)"
+        },
+        {
+          "name": "shop_orders_tracking_code_fmt",
+          "definition": "CHECK (tracking_code IS NULL OR tracking_code ~ '^BY-[A-Z0-9]{6}$'::text)"
+        }
+      ],
+      "rls_enabled": true
+    },
+    {
+      "table": "shop_price_candidates",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "run_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "product_id",
+          "type": "bigint",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "product_sku",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "product_name",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "category",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "unit",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "currency",
+          "type": "text",
+          "default": "'TOMAN'::text",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "current_price",
+          "type": "numeric(18,2)",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "wholesale_price",
+          "type": "numeric(18,2)",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "retail_price",
+          "type": "numeric(18,2)",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "suggested_price",
+          "type": "numeric(18,2)",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "match_confidence",
+          "type": "numeric(4,3)",
+          "default": "0",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "unit_match",
+          "type": "boolean",
+          "default": "false",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "match_status",
+          "type": "text",
+          "default": "'not_found'::text",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "sources",
+          "type": "jsonb",
+          "default": "'[]'::jsonb",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "default": "'pending'::text",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "approved_price",
+          "type": "numeric(18,2)",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "reviewed_by",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "reviewed_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "not_null": true
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX shop_price_candidates_pkey ON public.shop_price_candidates USING btree (id)",
+        "CREATE UNIQUE INDEX shop_price_candidates_run_id_product_sku_key ON public.shop_price_candidates USING btree (run_id, product_sku)",
+        "CREATE INDEX shop_price_candidates_status_idx ON public.shop_price_candidates USING btree (status, created_at DESC)",
+        "CREATE INDEX shop_price_candidates_run_idx ON public.shop_price_candidates USING btree (run_id, product_sku)"
+      ],
+      "force_rls": false,
+      "constraints": [
+        {
+          "name": "shop_price_candidates_approved_price_check",
+          "definition": "CHECK (approved_price IS NULL OR approved_price >= 0::numeric)"
+        },
+        {
+          "name": "shop_price_candidates_currency_check",
+          "definition": "CHECK (currency = 'TOMAN'::text)"
+        },
+        {
+          "name": "shop_price_candidates_current_price_check",
+          "definition": "CHECK (current_price >= 0::numeric)"
+        },
+        {
+          "name": "shop_price_candidates_match_confidence_check",
+          "definition": "CHECK (match_confidence >= 0::numeric AND match_confidence <= 1::numeric)"
+        },
+        {
+          "name": "shop_price_candidates_match_status_check",
+          "definition": "CHECK (match_status = ANY (ARRAY['verified'::text, 'partial'::text, 'ambiguous'::text, 'not_found'::text]))"
+        },
+        {
+          "name": "shop_price_candidates_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "shop_price_candidates_product_id_fkey",
+          "definition": "FOREIGN KEY (product_id) REFERENCES shop_products(id) ON DELETE SET NULL"
+        },
+        {
+          "name": "shop_price_candidates_retail_price_check",
+          "definition": "CHECK (retail_price IS NULL OR retail_price >= 0::numeric)"
+        },
+        {
+          "name": "shop_price_candidates_run_id_fkey",
+          "definition": "FOREIGN KEY (run_id) REFERENCES shop_price_update_runs(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "shop_price_candidates_run_id_product_sku_key",
+          "definition": "UNIQUE (run_id, product_sku)"
+        },
+        {
+          "name": "shop_price_candidates_sources_check",
+          "definition": "CHECK (jsonb_typeof(sources) = 'array'::text)"
+        },
+        {
+          "name": "shop_price_candidates_status_check",
+          "definition": "CHECK (status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text]))"
+        },
+        {
+          "name": "shop_price_candidates_suggested_price_check",
+          "definition": "CHECK (suggested_price IS NULL OR suggested_price >= 0::numeric)"
+        },
+        {
+          "name": "shop_price_candidates_wholesale_price_check",
+          "definition": "CHECK (wholesale_price IS NULL OR wholesale_price >= 0::numeric)"
+        }
+      ],
+      "rls_enabled": true
+    },
+    {
+      "table": "shop_price_history",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "default": null,
+          "identity": "d",
+          "not_null": true
+        },
+        {
+          "name": "product_id",
+          "type": "bigint",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "sku",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "product_name",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "old_price",
+          "type": "numeric",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "new_price",
+          "type": "numeric",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "changed_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "changed_by",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "batch_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "source_type",
+          "type": "text",
+          "default": "'database'::text",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "update_note",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX shop_price_history_pkey ON public.shop_price_history USING btree (id)",
+        "CREATE INDEX shop_price_history_batch_id_idx ON public.shop_price_history USING btree (batch_id)"
+      ],
+      "force_rls": false,
+      "constraints": [
+        {
+          "name": "shop_price_history_batch_id_fkey",
+          "definition": "FOREIGN KEY (batch_id) REFERENCES shop_price_update_batches(id) ON DELETE SET NULL"
+        },
+        {
+          "name": "shop_price_history_pkey",
+          "definition": "PRIMARY KEY (id)"
+        }
+      ],
+      "rls_enabled": true
+    },
+    {
+      "table": "shop_price_reports",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "file_name",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "file_path",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "rows_count",
+          "type": "integer",
+          "default": "0",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "period_start",
+          "type": "timestamp with time zone",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "period_end",
+          "type": "timestamp with time zone",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "created_by",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "batch_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX shop_price_reports_pkey ON public.shop_price_reports USING btree (id)",
+        "CREATE UNIQUE INDEX shop_price_reports_file_path_key ON public.shop_price_reports USING btree (file_path)"
+      ],
+      "force_rls": false,
+      "constraints": [
+        {
+          "name": "shop_price_reports_batch_id_fkey",
+          "definition": "FOREIGN KEY (batch_id) REFERENCES shop_price_update_batches(id) ON DELETE SET NULL"
+        },
+        {
+          "name": "shop_price_reports_file_path_key",
+          "definition": "UNIQUE (file_path)"
+        },
+        {
+          "name": "shop_price_reports_pkey",
+          "definition": "PRIMARY KEY (id)"
+        }
+      ],
+      "rls_enabled": true
+    },
+    {
+      "table": "shop_price_update_batches",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "source",
+          "type": "text",
+          "default": "'ChatGPT'::text",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "update_date",
+          "type": "timestamp with time zone",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "row_count",
+          "type": "integer",
+          "default": "0",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "created_by",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX shop_price_update_batches_pkey ON public.shop_price_update_batches USING btree (id)",
+        "CREATE INDEX shop_price_update_batches_update_date_idx ON public.shop_price_update_batches USING btree (update_date DESC)"
+      ],
+      "force_rls": false,
+      "constraints": [
+        {
+          "name": "shop_price_update_batches_pkey",
+          "definition": "PRIMARY KEY (id)"
+        }
+      ],
+      "rls_enabled": true
+    },
+    {
+      "table": "shop_price_update_runs",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "trigger_type",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "default": "'running'::text",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "product_count",
+          "type": "integer",
+          "default": "0",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "candidate_count",
+          "type": "integer",
+          "default": "0",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "error_message",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "not_null": true
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX shop_price_update_runs_pkey ON public.shop_price_update_runs USING btree (id)",
+        "CREATE INDEX shop_price_runs_created_idx ON public.shop_price_update_runs USING btree (created_at DESC)"
+      ],
+      "force_rls": false,
+      "constraints": [
+        {
+          "name": "shop_price_update_runs_candidate_count_check",
+          "definition": "CHECK (candidate_count >= 0)"
+        },
+        {
+          "name": "shop_price_update_runs_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "shop_price_update_runs_product_count_check",
+          "definition": "CHECK (product_count >= 0)"
+        },
+        {
+          "name": "shop_price_update_runs_status_check",
+          "definition": "CHECK (status = ANY (ARRAY['running'::text, 'completed'::text, 'failed'::text]))"
+        },
+        {
+          "name": "shop_price_update_runs_trigger_type_check",
+          "definition": "CHECK (trigger_type = ANY (ARRAY['manual'::text, 'cron'::text]))"
+        }
+      ],
+      "rls_enabled": true
+    },
+    {
+      "table": "shop_products",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "default": null,
+          "identity": "a",
+          "not_null": true
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "category",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "unit",
+          "type": "text",
+          "default": "'عدد'::text",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "price",
+          "type": "numeric",
+          "default": "0",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "emoji",
+          "type": "text",
+          "default": "'🔌'::text",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "in_stock",
+          "type": "boolean",
+          "default": "true",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "image_url",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "stock_qty",
+          "type": "integer",
+          "default": "0",
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "sku",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "not_null": true
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX shop_products_pkey ON public.shop_products USING btree (id)",
+        "CREATE UNIQUE INDEX shop_products_sku_uidx ON public.shop_products USING btree (sku)"
+      ],
+      "force_rls": false,
+      "constraints": [
+        {
+          "name": "shop_products_category_check",
+          "definition": "CHECK (char_length(category) >= 1 AND char_length(category) <= 60)"
+        },
+        {
+          "name": "shop_products_name_check",
+          "definition": "CHECK (char_length(name) >= 1 AND char_length(name) <= 150)"
+        },
+        {
+          "name": "shop_products_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "shop_products_price_check",
+          "definition": "CHECK (price >= 0::numeric)"
+        },
+        {
+          "name": "shop_products_stock_qty_check",
+          "definition": "CHECK (stock_qty IS NULL OR stock_qty >= 0)"
+        }
+      ],
+      "rls_enabled": true
+    },
+    {
+      "table": "shop_settings",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "default": "1",
+          "identity": "",
+          "not_null": true
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX shop_settings_pkey ON public.shop_settings USING btree (id)"
+      ],
+      "force_rls": false,
+      "constraints": [
+        {
+          "name": "shop_settings_id_check",
+          "definition": "CHECK (id = 1)"
+        },
+        {
+          "name": "shop_settings_pkey",
+          "definition": "PRIMARY KEY (id)"
+        }
+      ],
+      "rls_enabled": true
+    }
+  ],
+  "policies": [
+    {
+      "name": "shop_app_feedback_admin_delete",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "shop_app_feedback",
+      "using": "shop_is_admin()",
+      "schema": "public",
+      "command": "DELETE",
+      "with_check": null
+    },
+    {
+      "name": "shop_app_feedback_admin_read",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "shop_app_feedback",
+      "using": "shop_is_admin()",
+      "schema": "public",
+      "command": "SELECT",
+      "with_check": null
+    },
+    {
+      "name": "shop_app_feedback_admin_update",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "shop_app_feedback",
+      "using": "shop_is_admin()",
+      "schema": "public",
+      "command": "UPDATE",
+      "with_check": "shop_is_admin()"
+    },
+    {
+      "name": "shop_orders_admin_delete",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "shop_orders",
+      "using": "shop_is_admin()",
+      "schema": "public",
+      "command": "DELETE",
+      "with_check": null
+    },
+    {
+      "name": "shop_orders_admin_select",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "shop_orders",
+      "using": "shop_is_admin()",
+      "schema": "public",
+      "command": "SELECT",
+      "with_check": null
+    },
+    {
+      "name": "shop_orders_admin_update",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "shop_orders",
+      "using": "shop_is_admin()",
+      "schema": "public",
+      "command": "UPDATE",
+      "with_check": "shop_is_admin()"
+    },
+    {
+      "name": "shop_orders_public_insert",
+      "roles": [
+        "anon",
+        "authenticated"
+      ],
+      "table": "shop_orders",
+      "using": null,
+      "schema": "public",
+      "command": "INSERT",
+      "with_check": "((status = 'shipping'::text) AND shop_can_order(uid))"
+    },
+    {
+      "name": "shop_price_history_admin_insert",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "shop_price_history",
+      "using": null,
+      "schema": "public",
+      "command": "INSERT",
+      "with_check": "( SELECT shop_is_admin() AS shop_is_admin)"
+    },
+    {
+      "name": "shop_price_history_admin_select",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "shop_price_history",
+      "using": "( SELECT shop_is_admin() AS shop_is_admin)",
+      "schema": "public",
+      "command": "SELECT",
+      "with_check": null
+    },
+    {
+      "name": "shop_price_reports_admin_all",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "shop_price_reports",
+      "using": "( SELECT shop_is_admin() AS shop_is_admin)",
+      "schema": "public",
+      "command": "ALL",
+      "with_check": "( SELECT shop_is_admin() AS shop_is_admin)"
+    },
+    {
+      "name": "shop_price_update_batches_admin_all",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "shop_price_update_batches",
+      "using": "( SELECT shop_is_admin() AS shop_is_admin)",
+      "schema": "public",
+      "command": "ALL",
+      "with_check": "( SELECT shop_is_admin() AS shop_is_admin)"
+    },
+    {
+      "name": "shop_products_activated_read",
+      "roles": [
+        "anon",
+        "authenticated"
+      ],
+      "table": "shop_products",
+      "using": "shop_can_order(auth.uid())",
+      "schema": "public",
+      "command": "SELECT",
+      "with_check": null
+    },
+    {
+      "name": "shop_products_admin_delete",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "shop_products",
+      "using": "shop_is_admin()",
+      "schema": "public",
+      "command": "DELETE",
+      "with_check": null
+    },
+    {
+      "name": "shop_products_admin_insert",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "shop_products",
+      "using": null,
+      "schema": "public",
+      "command": "INSERT",
+      "with_check": "shop_is_admin()"
+    },
+    {
+      "name": "shop_products_admin_select",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "shop_products",
+      "using": "shop_is_admin()",
+      "schema": "public",
+      "command": "SELECT",
+      "with_check": null
+    },
+    {
+      "name": "shop_products_admin_update",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "shop_products",
+      "using": "shop_is_admin()",
+      "schema": "public",
+      "command": "UPDATE",
+      "with_check": "shop_is_admin()"
+    },
+    {
+      "name": "shop_settings_admin_select",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "shop_settings",
+      "using": "shop_is_admin()",
+      "schema": "public",
+      "command": "SELECT",
+      "with_check": null
+    },
+    {
+      "name": "shop_settings_admin_update",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "shop_settings",
+      "using": "shop_is_admin()",
+      "schema": "public",
+      "command": "UPDATE",
+      "with_check": "shop_is_admin()"
+    }
+  ],
+  "triggers": [
+    {
+      "name": "shop_validate_order_items_before_insert",
+      "table": "shop_orders",
+      "schema": "public",
+      "definition": "CREATE TRIGGER shop_validate_order_items_before_insert BEFORE INSERT ON shop_orders FOR EACH ROW EXECUTE FUNCTION shop_validate_order_items()"
+    },
+    {
+      "name": "shop_products_assign_sku_before_insert",
+      "table": "shop_products",
+      "schema": "public",
+      "definition": "CREATE TRIGGER shop_products_assign_sku_before_insert BEFORE INSERT ON shop_products FOR EACH ROW EXECUTE FUNCTION shop_products_assign_sku()"
+    },
+    {
+      "name": "trg_shop_products_price_history",
+      "table": "shop_products",
+      "schema": "public",
+      "definition": "CREATE TRIGGER trg_shop_products_price_history AFTER UPDATE OF price ON shop_products FOR EACH ROW EXECUTE FUNCTION shop_log_price_change()"
+    },
+    {
+      "name": "trg_shop_products_set_code_and_timestamp",
+      "table": "shop_products",
+      "schema": "public",
+      "definition": "CREATE TRIGGER trg_shop_products_set_code_and_timestamp BEFORE INSERT OR UPDATE ON shop_products FOR EACH ROW EXECUTE FUNCTION shop_products_set_code_and_timestamp()"
+    }
+  ],
+  "functions": [
+    {
+      "name": "shop_admin_approve_order",
+      "schema": "public",
+      "returns": "void",
+      "language": "plpgsql",
+      "definition": "CREATE OR REPLACE FUNCTION public.shop_admin_approve_order(p_order_id uuid, p_code text)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public'\nAS $function$\ndeclare\n  v_order public.shop_orders%rowtype;\nbegin\n  if not public.shop_is_admin() then\n    raise exception 'دسترسی مدیر لازم است';\n  end if;\n\n  select * into v_order\n  from public.shop_orders\n  where id = p_order_id\n  for update;\n\n  if not found then\n    raise exception 'سفارش پیدا نشد';\n  end if;\n\n  if v_order.tracking_code is null\n     or v_order.tracking_code <> upper(trim(coalesce(p_code, ''))) then\n    raise exception 'کد یکتای سفارش درست نیست';\n  end if;\n\n  if v_order.status = 'approved' then\n    raise exception 'این سفارش قبلاً توسط مدیر تأیید شده است';\n  end if;\n\n  if v_order.status <> 'shipping' then\n    raise exception 'فقط سفارش در انتظار تأیید مدیر قابل تأیید است';\n  end if;\n\n  if not v_order.inventory_deducted then\n    raise exception 'ثبت کسر موجودی سفارش معتبر نیست';\n  end if;\n\n  update public.shop_orders\n     set status = 'approved',\n         admin_approved_at = now(),\n         admin_approved_by = auth.uid()\n   where id = p_order_id;\nend;\n$function$\n",
+      "identity_args": "p_order_id uuid, p_code text",
+      "security_definer": true
+    },
+    {
+      "name": "shop_admin_archive_order_report",
+      "schema": "public",
+      "returns": "boolean",
+      "language": "plpgsql",
+      "definition": "CREATE OR REPLACE FUNCTION public.shop_admin_archive_order_report(p_order_id uuid)\n RETURNS boolean\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nbegin\n  if not public.shop_is_admin() then\n    raise exception 'دسترسی مدیر لازم است';\n  end if;\n\n  if p_order_id is null then\n    raise exception 'شناسه گزارش معتبر نیست';\n  end if;\n\n  update public.shop_orders\n     set report_archived_at = now(),\n         report_archived_by = auth.uid()\n   where id = p_order_id\n     and report_archived_at is null;\n\n  if not found then\n    raise exception 'گزارش پیدا نشد یا قبلاً حذف شده است';\n  end if;\n\n  return true;\nend;\n$function$\n",
+      "identity_args": "p_order_id uuid",
+      "security_definer": false
+    },
+    {
+      "name": "shop_admin_create_activation_code",
+      "schema": "public",
+      "returns": "jsonb",
+      "language": "plpgsql",
+      "definition": "CREATE OR REPLACE FUNCTION public.shop_admin_create_activation_code(p_expires_days integer DEFAULT 30)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare\n  v_code text;\n  v_id uuid;\n  v_expires timestamptz;\nbegin\n  if not public.shop_is_admin() then raise exception 'دسترسی مدیر لازم است'; end if;\n  if p_expires_days is null or p_expires_days not between 1 and 365 then\n    raise exception 'مدت اعتبار کد باید بین ۱ تا ۳۶۵ روز باشد';\n  end if;\n  v_code := 'BYR-' || upper(encode(extensions.gen_random_bytes(16), 'hex'));\n  v_expires := now() + make_interval(days => p_expires_days);\n  insert into public.shop_activation_codes(code_hash, code_hint, expires_at, created_by)\n  values (encode(extensions.digest(v_code, 'sha256'), 'hex'), right(v_code, 4), v_expires, auth.uid())\n  returning id into v_id;\n  return jsonb_build_object('id', v_id, 'code', v_code, 'expires_at', v_expires);\nend;\n$function$\n",
+      "identity_args": "p_expires_days integer",
+      "security_definer": true
+    },
+    {
+      "name": "shop_admin_delete_order",
+      "schema": "public",
+      "returns": "boolean",
+      "language": "plpgsql",
+      "definition": "CREATE OR REPLACE FUNCTION public.shop_admin_delete_order(p_order_id uuid)\n RETURNS boolean\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare\n  v_order public.shop_orders%rowtype;\n  v_product_id bigint;\n  v_qty integer;\nbegin\n  if not public.shop_is_admin() then\n    raise exception 'دسترسی مدیر لازم است';\n  end if;\n  if p_order_id is null then\n    raise exception 'شناسه سفارش معتبر نیست';\n  end if;\n\n  select * into v_order\n  from public.shop_orders\n  where id = p_order_id\n  for update;\n\n  if not found then\n    raise exception 'سفارش پیدا نشد';\n  end if;\n\n  -- Only restore stock for orders that were still awaiting manager approval.\n  if v_order.status = 'shipping' and v_order.inventory_deducted then\n    for v_product_id, v_qty in\n      select (value->>'product_id')::bigint,\n             sum((value->>'qty')::integer)::integer\n      from jsonb_array_elements(v_order.items)\n      where value ? 'product_id'\n      group by (value->>'product_id')::bigint\n      order by (value->>'product_id')::bigint\n    loop\n      update public.shop_products\n      set stock_qty = case when stock_qty is null then null else stock_qty + v_qty end,\n          in_stock = true\n      where id = v_product_id;\n    end loop;\n  end if;\n\n  delete from public.shop_orders where id = p_order_id;\n  return true;\nend;\n$function$\n",
+      "identity_args": "p_order_id uuid",
+      "security_definer": true
+    },
+    {
+      "name": "shop_admin_deliver",
+      "schema": "public",
+      "returns": "void",
+      "language": "plpgsql",
+      "definition": "CREATE OR REPLACE FUNCTION public.shop_admin_deliver(p_order_id uuid, p_code text)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nDECLARE\n  v_order public.shop_orders%rowtype;\nBEGIN\n  IF NOT public.shop_is_admin() THEN\n    RAISE EXCEPTION 'دسترسی مدیر لازم است';\n  END IF;\n\n  SELECT *\n    INTO v_order\n    FROM public.shop_orders\n   WHERE id = p_order_id\n   FOR UPDATE;\n\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'سفارش پیدا نشد';\n  END IF;\n\n  IF v_order.tracking_code IS NULL\n     OR v_order.tracking_code <> upper(btrim(coalesce(p_code, ''))) THEN\n    RAISE EXCEPTION 'کد یکتای سفارش درست نیست';\n  END IF;\n\n  IF v_order.status = 'done' THEN\n    RAISE EXCEPTION 'این سفارش قبلاً تکمیل شده است';\n  END IF;\n\n  IF v_order.status <> 'approved' THEN\n    RAISE EXCEPTION 'ابتدا باید سفارش توسط مدیر تأیید شود';\n  END IF;\n\n  IF NOT v_order.inventory_deducted THEN\n    RAISE EXCEPTION 'وضعیت کسر موجودی سفارش معتبر نیست';\n  END IF;\n\n  UPDATE public.shop_orders\n     SET status = 'done',\n         delivered_at = now(),\n         delivery_verified = true\n   WHERE id = p_order_id;\nEND;\n$function$\n",
+      "identity_args": "p_order_id uuid, p_code text",
+      "security_definer": true
+    },
+    {
+      "name": "shop_admin_list_activation_codes",
+      "schema": "public",
+      "returns": "TABLE(id uuid, code_hint text, created_at timestamp with time zone, expires_at timestamp with time zone, redeemed_at timestamp with time zone, revoked_at timestamp with time zone, device_id uuid, activation_revoked_at timestamp with time zone)",
+      "language": "plpgsql",
+      "definition": "CREATE OR REPLACE FUNCTION public.shop_admin_list_activation_codes()\n RETURNS TABLE(id uuid, code_hint text, created_at timestamp with time zone, expires_at timestamp with time zone, redeemed_at timestamp with time zone, revoked_at timestamp with time zone, device_id uuid, activation_revoked_at timestamp with time zone)\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nbegin\n  if not public.shop_is_admin() then raise exception 'دسترسی مدیر لازم است'; end if;\n  return query\n  select c.id, c.code_hint, c.created_at, c.expires_at, c.redeemed_at, c.revoked_at,\n         a.device_id, a.revoked_at\n  from public.shop_activation_codes c\n  left join public.shop_activations a on a.activation_code_id = c.id\n  order by c.created_at desc\n  limit 100;\nend;\n$function$\n",
+      "identity_args": "",
+      "security_definer": true
+    },
+    {
+      "name": "shop_admin_revoke_activation",
+      "schema": "public",
+      "returns": "void",
+      "language": "plpgsql",
+      "definition": "CREATE OR REPLACE FUNCTION public.shop_admin_revoke_activation(p_device_id uuid)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nbegin\n  if not public.shop_is_admin() then raise exception 'دسترسی مدیر لازم است'; end if;\n  update public.shop_activations\n     set revoked_at = coalesce(revoked_at, now())\n   where device_id = p_device_id;\nend;\n$function$\n",
+      "identity_args": "p_device_id uuid",
+      "security_definer": true
+    },
+    {
+      "name": "shop_admin_revoke_activation_code",
+      "schema": "public",
+      "returns": "void",
+      "language": "plpgsql",
+      "definition": "CREATE OR REPLACE FUNCTION public.shop_admin_revoke_activation_code(p_code_id uuid)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nbegin\n  if not public.shop_is_admin() then raise exception 'دسترسی مدیر لازم است'; end if;\n  update public.shop_activation_codes\n     set revoked_at = coalesce(revoked_at, now())\n   where id = p_code_id and redeemed_at is null;\nend;\n$function$\n",
+      "identity_args": "p_code_id uuid",
+      "security_definer": true
+    },
+    {
+      "name": "shop_admin_set_order_status",
+      "schema": "public",
+      "returns": "void",
+      "language": "plpgsql",
+      "definition": "CREATE OR REPLACE FUNCTION public.shop_admin_set_order_status(p_order_id uuid, p_status text)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\ndeclare\n  v_order public.shop_orders%rowtype;\n  v_product_id bigint;\n  v_qty integer;\nbegin\n  if not public.shop_is_admin() then\n    raise exception 'دسترسی مدیر لازم است';\n  end if;\n  if p_status is distinct from 'cancelled' then\n    raise exception 'تنها لغو سفارش از این بخش مجاز است';\n  end if;\n\n  select * into v_order from public.shop_orders where id = p_order_id for update;\n  if not found then raise exception 'سفارش پیدا نشد'; end if;\n  if v_order.status in ('done','cancelled') then\n    raise exception 'سفارش بسته یا لغو شده و قابل تغییر نیست';\n  end if;\n\n  if v_order.inventory_deducted then\n    for v_product_id, v_qty in\n      select (value->>'product_id')::bigint, sum((value->>'qty')::integer)::integer\n        from jsonb_array_elements(v_order.items)\n       where value ? 'product_id'\n       group by (value->>'product_id')::bigint\n       order by (value->>'product_id')::bigint\n    loop\n      update public.shop_products\n         set stock_qty = case when stock_qty is null then null else stock_qty + v_qty end,\n             in_stock = true\n       where id = v_product_id;\n    end loop;\n  end if;\n\n  update public.shop_orders\n     set status = 'cancelled', inventory_deducted = false\n   where id = p_order_id;\nend\n$function$\n",
+      "identity_args": "p_order_id uuid, p_status text",
+      "security_definer": true
+    },
+    {
+      "name": "shop_admin_update_order_report",
+      "schema": "public",
+      "returns": "boolean",
+      "language": "plpgsql",
+      "definition": "CREATE OR REPLACE FUNCTION public.shop_admin_update_order_report(p_order_id uuid, p_customer_name text, p_phone text, p_address text)\n RETURNS boolean\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nbegin\n  if not public.shop_is_admin() then\n    raise exception 'دسترسی مدیر لازم است';\n  end if;\n\n  if p_order_id is null\n     or char_length(btrim(coalesce(p_customer_name, ''))) < 1\n     or char_length(btrim(coalesce(p_customer_name, ''))) > 120\n     or char_length(btrim(coalesce(p_phone, ''))) < 5\n     or char_length(btrim(coalesce(p_phone, ''))) > 30\n     or char_length(btrim(coalesce(p_address, ''))) < 1\n     or char_length(btrim(coalesce(p_address, ''))) > 500 then\n    raise exception 'اطلاعات گزارش معتبر نیست';\n  end if;\n\n  update public.shop_orders\n     set customer_name = btrim(p_customer_name),\n         phone = btrim(p_phone),\n         address = btrim(p_address)\n   where id = p_order_id\n     and report_archived_at is null;\n\n  if not found then\n    raise exception 'گزارش پیدا نشد یا قبلاً حذف شده است';\n  end if;\n\n  return true;\nend;\n$function$\n",
+      "identity_args": "p_order_id uuid, p_customer_name text, p_phone text, p_address text",
+      "security_definer": false
+    },
+    {
+      "name": "shop_can_order",
+      "schema": "public",
+      "returns": "boolean",
+      "language": "sql",
+      "definition": "CREATE OR REPLACE FUNCTION public.shop_can_order(p_uid uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n  SELECT true;\n$function$\n",
+      "identity_args": "p_uid uuid",
+      "security_definer": true
+    },
+    {
+      "name": "shop_check_activation",
+      "schema": "public",
+      "returns": "boolean",
+      "language": "sql",
+      "definition": "CREATE OR REPLACE FUNCTION public.shop_check_activation(p_device_id uuid, p_device_secret text)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n  select p_device_id is not null\n     and length(coalesce(p_device_secret,'')) >= 32\n     and exists (\n       select 1 from public.shop_activations a\n       where a.device_id = p_device_id\n         and a.secret_hash = encode(extensions.digest(p_device_secret, 'sha256'), 'hex')\n         and a.revoked_at is null\n     );\n$function$\n",
+      "identity_args": "p_device_id uuid, p_device_secret text",
+      "security_definer": true
+    },
+    {
+      "name": "shop_device_is_activated",
+      "schema": "public",
+      "returns": "boolean",
+      "language": "plpgsql",
+      "definition": "CREATE OR REPLACE FUNCTION public.shop_device_is_activated()\n RETURNS boolean\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare\n  h jsonb;\n  client_info text;\n  v_device text;\n  v_secret text;\nbegin\n  h := coalesce(nullif(current_setting('request.headers', true), '')::jsonb, '{}'::jsonb);\n  client_info := coalesce(h->>'x-client-info','');\n  v_device := substring(client_info from 'barqyar-device=([0-9a-fA-F-]{36})');\n  v_secret := substring(client_info from 'secret=([0-9a-fA-F]{64})');\n  if v_device is null or v_secret is null then return false; end if;\n  return exists (\n    select 1 from public.shop_activations a\n    where a.device_id = v_device::uuid\n      and a.secret_hash = encode(extensions.digest(v_secret, 'sha256'), 'hex')\n      and a.revoked_at is null\n  );\nexception when others then\n  return false;\nend;\n$function$\n",
+      "identity_args": "",
+      "security_definer": true
+    },
+    {
+      "name": "shop_get_products",
+      "schema": "public",
+      "returns": "SETOF shop_products",
+      "language": "plpgsql",
+      "definition": "CREATE OR REPLACE FUNCTION public.shop_get_products(p_uid uuid)\n RETURNS SETOF shop_products\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nbegin\n  if public.shop_can_order(p_uid) or public.shop_is_admin() then\n    return query select * from public.shop_products order by id;\n  end if;\n  return;\nend\n$function$\n",
+      "identity_args": "p_uid uuid",
+      "security_definer": true
+    },
+    {
+      "name": "shop_is_admin",
+      "schema": "public",
+      "returns": "boolean",
+      "language": "sql",
+      "definition": "CREATE OR REPLACE FUNCTION public.shop_is_admin()\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n  select exists (select 1 from public.shop_admins where lower(email) = lower(coalesce(auth.jwt() ->> 'email', '')))\n$function$\n",
+      "identity_args": "",
+      "security_definer": true
+    },
+    {
+      "name": "shop_log_price_change",
+      "schema": "public",
+      "returns": "trigger",
+      "language": "plpgsql",
+      "definition": "CREATE OR REPLACE FUNCTION public.shop_log_price_change()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nbegin\n if old.price is distinct from new.price then\n  insert into public.shop_price_history(product_id,sku,product_name,old_price,new_price,changed_at,changed_by)\n  values(new.id,new.sku,new.name,old.price,new.price,now(),coalesce(auth.jwt()->>'email','مدیر'));\n end if;\n return new;\nend;\n$function$\n",
+      "identity_args": "",
+      "security_definer": false
+    },
+    {
+      "name": "shop_products_assign_sku",
+      "schema": "public",
+      "returns": "trigger",
+      "language": "plpgsql",
+      "definition": "CREATE OR REPLACE FUNCTION public.shop_products_assign_sku()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\nbegin\n  if new.sku is null or btrim(new.sku) = '' then\n    loop\n      new.sku := 'BYK-' || lpad(nextval('public.shop_products_sku_seq')::text, 6, '0');\n      exit when not exists (select 1 from public.shop_products p where p.sku = new.sku);\n    end loop;\n  end if;\n  return new;\nend;\n$function$\n",
+      "identity_args": "",
+      "security_definer": false
+    },
+    {
+      "name": "shop_products_set_code_and_timestamp",
+      "schema": "public",
+      "returns": "trigger",
+      "language": "plpgsql",
+      "definition": "CREATE OR REPLACE FUNCTION public.shop_products_set_code_and_timestamp()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nbegin\n  if tg_op = 'INSERT' then\n    if new.sku is null or btrim(new.sku) = '' then\n      new.sku := 'BYK-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8));\n    end if;\n  else\n    new.sku := old.sku;\n  end if;\n\n  new.updated_at := now();\n  return new;\nend;\n$function$\n",
+      "identity_args": "",
+      "security_definer": false
+    },
+    {
+      "name": "shop_redeem_activation",
+      "schema": "public",
+      "returns": "jsonb",
+      "language": "plpgsql",
+      "definition": "CREATE OR REPLACE FUNCTION public.shop_redeem_activation(p_code text, p_device_id uuid, p_device_secret text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare\n  v_code public.shop_activation_codes%rowtype;\n  v_hash text;\nbegin\n  if p_device_id is null or length(coalesce(p_device_secret,'')) < 32 then\n    raise exception 'اطلاعات دستگاه معتبر نیست';\n  end if;\n\n  if public.shop_check_activation(p_device_id, p_device_secret) then\n    return jsonb_build_object('ok', true, 'already_activated', true);\n  end if;\n\n  v_hash := encode(extensions.digest(upper(btrim(coalesce(p_code,''))), 'sha256'), 'hex');\n  select * into v_code\n  from public.shop_activation_codes\n  where code_hash = v_hash\n  for update;\n\n  if not found or v_code.redeemed_at is not null or v_code.revoked_at is not null or v_code.expires_at <= now() then\n    raise exception 'کد فعال‌سازی نامعتبر، منقضی یا قبلاً استفاده شده است';\n  end if;\n\n  if exists (select 1 from public.shop_activations where device_id = p_device_id) then\n    raise exception 'این دستگاه قبلاً فعال‌سازی شده یا دسترسی آن لغو شده است';\n  end if;\n\n  insert into public.shop_activations(device_id, secret_hash, activation_code_id)\n  values (p_device_id, encode(extensions.digest(p_device_secret, 'sha256'), 'hex'), v_code.id);\n\n  update public.shop_activation_codes\n     set redeemed_at = now(), redeemed_device_id = p_device_id\n   where id = v_code.id;\n\n  return jsonb_build_object('ok', true, 'already_activated', false);\nend;\n$function$\n",
+      "identity_args": "p_code text, p_device_id uuid, p_device_secret text",
+      "security_definer": true
+    },
+    {
+      "name": "shop_track_order",
+      "schema": "public",
+      "returns": "TABLE(status text, created_at timestamp with time zone, total numeric, customer_confirmed_at timestamp with time zone, delivered_at timestamp with time zone)",
+      "language": "sql",
+      "definition": "CREATE OR REPLACE FUNCTION public.shop_track_order(p_code text)\n RETURNS TABLE(status text, created_at timestamp with time zone, total numeric, customer_confirmed_at timestamp with time zone, delivered_at timestamp with time zone)\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n  select o.status, o.created_at, o.total, o.customer_confirmed_at, o.delivered_at\n  from public.shop_orders o where o.tracking_code = upper(trim(p_code)) limit 1\n$function$\n",
+      "identity_args": "p_code text",
+      "security_definer": true
+    },
+    {
+      "name": "shop_track_order_details",
+      "schema": "public",
+      "returns": "TABLE(status text, created_at timestamp with time zone, total numeric, tracking_code text)",
+      "language": "sql",
+      "definition": "CREATE OR REPLACE FUNCTION public.shop_track_order_details(p_code text)\n RETURNS TABLE(status text, created_at timestamp with time zone, total numeric, tracking_code text)\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public'\nAS $function$\n select o.status,o.created_at,o.total,o.tracking_code\n from public.shop_orders o\n where o.tracking_code=upper(trim(p_code))\n limit 1;\n$function$\n",
+      "identity_args": "p_code text",
+      "security_definer": true
+    },
+    {
+      "name": "shop_validate_order_items",
+      "schema": "public",
+      "returns": "trigger",
+      "language": "plpgsql",
+      "definition": "CREATE OR REPLACE FUNCTION public.shop_validate_order_items()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\ndeclare\n  v_item jsonb;\n  v_product public.shop_products%rowtype;\n  v_product_id bigint;\n  v_qty integer;\n  v_total numeric := 0;\n  v_items jsonb := '[]'::jsonb;\nbegin\n  if jsonb_typeof(new.items) <> 'array' or jsonb_array_length(new.items) < 1 then\n    raise exception 'سبد خرید خالی است';\n  end if;\n\n  for v_item in select value from jsonb_array_elements(new.items)\n  loop\n    if not (v_item ? 'product_id') then raise exception 'شناسه کالا در سفارش وجود ندارد'; end if;\n    v_product_id := (v_item->>'product_id')::bigint;\n    v_qty := (v_item->>'qty')::integer;\n    if v_qty is null or v_qty < 1 or v_qty > 10000 then raise exception 'تعداد کالا نامعتبر است'; end if;\n  end loop;\n\n  -- Lock and validate every product in a stable order to avoid overselling.\n  for v_product_id, v_qty in\n    select (value->>'product_id')::bigint, sum((value->>'qty')::integer)::integer\n      from jsonb_array_elements(new.items)\n     group by (value->>'product_id')::bigint\n     order by (value->>'product_id')::bigint\n  loop\n    select * into v_product from public.shop_products where id = v_product_id for update;\n    if not found or not v_product.in_stock then raise exception 'یکی از کالاها موجود نیست'; end if;\n    if v_product.stock_qty is not null and v_product.stock_qty < v_qty then\n      raise exception 'موجودی کالای % کافی نیست. موجودی: %', v_product.name, v_product.stock_qty;\n    end if;\n  end loop;\n\n  for v_item in select value from jsonb_array_elements(new.items)\n  loop\n    v_product_id := (v_item->>'product_id')::bigint;\n    v_qty := (v_item->>'qty')::integer;\n    select * into v_product from public.shop_products where id = v_product_id;\n    if v_item ? 'price' and (v_item->>'price')::numeric <> v_product.price then\n      raise exception 'قیمت کالای % تغییر کرده است؛ صفحه فروشگاه را تازه کنید و دوباره سفارش دهید.', v_product.name;\n    end if;\n    v_items := v_items || jsonb_build_array(jsonb_build_object(\n      'product_id', v_product.id,'name', v_product.name,'unit', v_product.unit,\n      'qty', v_qty,'price', v_product.price,'line_total', v_product.price * v_qty\n    ));\n    v_total := v_total + (v_product.price * v_qty);\n  end loop;\n\n  -- Sending an order now reserves/deducts stock; no manager approval/preparation stages.\n  for v_product_id, v_qty in\n    select (value->>'product_id')::bigint, sum((value->>'qty')::integer)::integer\n      from jsonb_array_elements(new.items)\n     group by (value->>'product_id')::bigint\n     order by (value->>'product_id')::bigint\n  loop\n    update public.shop_products\n       set stock_qty = case when stock_qty is null then null else stock_qty - v_qty end,\n           in_stock = case when stock_qty is null then in_stock else (stock_qty - v_qty) > 0 end\n     where id = v_product_id;\n  end loop;\n\n  new.items := v_items;\n  new.total := v_total;\n  new.status := 'shipping';\n  new.inventory_deducted := true;\n  new.payment_status := 'unpaid';\n  new.shipping_fee := 0;\n  return new;\nend\n$function$\n",
+      "identity_args": "",
+      "security_definer": true
+    }
+  ],
+  "extensions": [
+    {
+      "name": "plpgsql",
+      "schema": "pg_catalog",
+      "version": "1.0"
+    },
+    {
+      "name": "pg_stat_statements",
+      "schema": "extensions",
+      "version": "1.11"
+    },
+    {
+      "name": "uuid-ossp",
+      "schema": "extensions",
+      "version": "1.1"
+    },
+    {
+      "name": "pgcrypto",
+      "schema": "extensions",
+      "version": "1.3"
+    },
+    {
+      "name": "supabase_vault",
+      "schema": "vault",
+      "version": "0.3.1"
+    },
+    {
+      "name": "pg_cron",
+      "schema": "pg_catalog",
+      "version": "1.6.4"
+    },
+    {
+      "name": "pg_net",
+      "schema": "public",
+      "version": "0.20.4"
+    }
+  ],
+  "project_id": "zgswoheckqasqoclhodg",
+  "captured_at": "2026-11-23T12:24:20.50761+00:00",
+  "postgres_version": "PostgreSQL 17.11 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit",
+  "public_order_permission": "CREATE OR REPLACE FUNCTION public.shop_can_order(p_uid uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n  SELECT true;\n$function$\n",
+  "github_repository": "ailifedad-bot/barqyar",
+  "github_branch": "main",
+  "github_commit": "215c39c6d9fe565df138c6cd7f066aaf94d27e5c",
+  "github_files": [
+    "README.md",
+    "app.js",
+    "apple-touch-icon.png",
+    "google7e7a68dd8dbd0f82.html",
+    "icon-192.png",
+    "icon-512.png",
+    "index.html",
+    "manifest.json",
+    "privacy.html",
+    "robots.txt",
+    "sitemap.xml",
+    "supabase/functions/barqyar-price-update/deno.json",
+    "supabase/functions/barqyar-price-update/index.ts",
+    "supabase/sql/barqyar-delivery-confirmation.sql",
+    "supabase/sql/barqyar-smart-price-updates.sql",
+    "sw.js"
+  ]
+}
