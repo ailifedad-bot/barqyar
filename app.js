@@ -139,7 +139,7 @@ function login(){
   });
  }).catch(function(){token=null;managerAccess=false;loginView('تأیید ورود مدیر انجام نشد. اتصال را بررسی و دوباره تلاش کنید.')});
 }
-function logout(){
+function logout(){adminAuthClient.auth.signOut().finally(function(){token=null;managerAccess=false;closeSh();checkDeviceActivation().then(function(active){activationUnlocked=active;if(active){hideActivationGate();load();startProductRealtime()}else showActivationGate('برای ادامه استفاده، کد فعال‌سازی رایگان را از مدیر دریافت کنید.')})})}
  adminAuthClient.auth.signOut().finally(function(){
   token=null;managerAccess=false;closeSh();
   activationUnlocked=true;load();startProductRealtime();
