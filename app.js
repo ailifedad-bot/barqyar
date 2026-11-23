@@ -55,16 +55,18 @@ function initActivation(){
   if(isAdmin){hideActivationGate();load();startProductRealtime();return}
   return checkDeviceActivation().then(function(active){
    activationUnlocked=active;
-   hideActivationGate();
-   load();
-   startProductRealtime();
+   if(active){
+    hideActivationGate();
+    load();
+    startProductRealtime();
+   }else{
+    showActivationGate('برای فعال‌کردن این دستگاه، کد یک‌بارمصرفی را که مدیر صادر کرده است وارد کنید. برای دریافت کد با مدیر برنامه تماس بگیرید.');
+   }
   });
  }).catch(function(e){
-  console.warn('Activation status check failed; public app will still load:',e);
+  console.warn('Activation status check failed:',e);
   activationUnlocked=false;
-  hideActivationGate();
-  load();
-  startProductRealtime();
+  showActivationGate('بررسی وضعیت فعال‌سازی انجام نشد. اتصال اینترنت را بررسی کنید و دوباره تلاش کنید.');
  });
 }
 function load(){refreshProducts()}
