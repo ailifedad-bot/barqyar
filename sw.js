@@ -1,4 +1,4 @@
-var CACHE='barqyar-v61-ai-advisor-20261123';
+var CACHE='barqyar-v62-activation-prompt-20261123';
 var SHELL=['./','index.html','manifest.json','app.js','ai-chat.js','privacy.html','icon-192.png','icon-512.png'];
 self.addEventListener('install',function(e){
  e.waitUntil(caches.open(CACHE).then(function(c){return c.addAll(SHELL)}).then(function(){return self.skipWaiting()}));
