@@ -1,4 +1,4 @@
-var CACHE='barqyar-v63-no-activation-no-ai-20261124';
+var CACHE='barqyar-v63-basic-20261124';
 var SHELL=['./','index.html','manifest.json','app.js','privacy.html','icon-192.png','icon-512.png'];
 self.addEventListener('install',function(e){
  e.waitUntil(caches.open(CACHE).then(function(c){return c.addAll(SHELL)}).then(function(){return self.skipWaiting()}));
