@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "ir.barqyar.app",
+      "sha256_cert_fingerprints": [
+        "D1:99:05:36:6B:85:07:47:9A:65:20:18:F6:0B:2A:AC:FB:64:58:9D:51:72:D4:89:E9:8C:1D:E2:AE:7E:0E:55"
+      ]
+    }
+  }
+]
