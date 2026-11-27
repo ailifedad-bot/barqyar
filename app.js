@@ -290,7 +290,7 @@ function openTrack(){
 }
 var customerTrackTimer=null,customerTrackRequest=0;
 function customerPhoneChanged(){clearTimeout(customerTrackTimer);var s=$('trackOrderSelect'),d=$('customerOrderDetail');if(s)s.innerHTML='<option value="">در حال بررسی شماره…</option>';if(d)d.innerHTML='';window.customerTrackOrders=[];var p=normalizeCustomerPhone(val('trackPhone'));if(p.length>=10)customerTrackTimer=setTimeout(loadCustomerOrders,450)}
-function normalizeCustomerPhone(p){return toEn(String(p||'')).replace(/[^0-9]/g,'')}
+function normalizeCustomerPhone(p){var d=toEn(String(p||'')).replace(/[^0-9]/g,'');if(d.indexOf('0098')===0)d='0'+d.slice(4);else if(d.indexOf('98')===0&&d.length>=12)d='0'+d.slice(2);return d}
 function loadCustomerOrders(){
  var phone=normalizeCustomerPhone(val('trackPhone')),requestId=++customerTrackRequest;
  if(phone.length<10){$('customerOrderDetail').innerHTML='<p class="err">شماره موبایل را کامل وارد کنید.</p>';return}
