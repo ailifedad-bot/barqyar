@@ -314,8 +314,8 @@ function chooseCustomerOrder(){
 }
 function saveCustomerOrderPdf(){
  var source=$('customerOrderReport');if(!source)return;
- if(window.html2pdf){html2pdf().set({margin:8,filename:'barqyar-order-'+String($('trackOrderSelect').value||'order')+'.pdf',html2canvas:{scale:1.5,backgroundColor:'#fff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(source).save().catch(function(){printDoc(source.outerHTML)});return}
- printDoc(source.outerHTML);
+ ensureHtml2Pdf().then(function(){return html2pdf().set({margin:8,filename:'barqyar-order-'+String($('trackOrderSelect').value||'order')+'.pdf',html2canvas:{scale:1.5,backgroundColor:'#fff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(source).save()})
+ .catch(function(){var w=window.open('','_blank');if(!w){alert('پنجره چاپ مسدود شد.');return}w.document.write('<html><head><meta charset="utf-8"><title>گزارش سفارش</title></head><body dir="rtl">'+source.outerHTML+'<script>window.onload=function(){window.print()}<\\/script></body></html>');w.document.close()});
 }
 function doTrack(){loadCustomerOrders()}
 function doTrack(){
