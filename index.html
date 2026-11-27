@@ -204,7 +204,7 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 </head>
 <body>
 <header>
-<div class="top"><h1>⚡ برق‌<span>یار</span></h1><div><button class="link" id="inst" style="display:none" onclick="installApp()">📲 نصب</button><button class="link" onclick="openTrack()">پیگیری سفارش</button><button class="link" onclick="openContact()">تماس</button><button class="link" id="admb" onclick="openAdmin()">⚙️ مدیر</button></div></div>
+<div class="top"><h1>⚡ برق‌<span>یار</span></h1><div><button class="link" id="inst" style="display:none" onclick="installApp()">📲 نصب</button><button class="link" onclick="openTrack()">پیگیری سفارش</button><button class="link" onclick="openContact()">تماس</button></div></div>
 <a class="phone" href="tel:09366428816">📞 ۰۹۳۶۶۴۲۸۸۱۶</a>
 <input id="q" placeholder="جستجوی کالا (مثلاً سیم، کلید، لامپ…)" oninput="draw()">
 </header>
@@ -234,6 +234,11 @@ input,textarea,select{width:100%;padding:11px 14px;border:1px solid var(--bd);bo
 <script defer src="app.js?v=barqyar-no-activation-no-ai-20261124"></script>
 <script>
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
+window.addEventListener('load',function(){
+ try{
+  if(new URLSearchParams(window.location.search).get('admin')==='1'&&typeof window.openAdmin==='function')window.openAdmin();
+ }catch(e){}
+});
 </script>
 </body>
 </html>
