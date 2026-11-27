@@ -283,7 +283,41 @@ function renderLocalOrderChoices(){var s=$('trackOrderSelect');if(!s)return;var 
 function chooseLocalOrder(){var s=$('trackOrderSelect');if(s&&s.value){$('tc').value=s.value;doTrack()}}
 function openTrackForCurrentOrder(){try{localStorage.setItem('barqyar_last_order',JSON.stringify({code:code,phone:toEn(val('ph').trim())}))}catch(e){}openTrack();setTimeout(function(){if($('tc')){$('tc').value=code;if($('trackPhone')&&!$('trackPhone').value)$('trackPhone').value=toEn(val('ph').trim());doTrack()}},250)}
 function go(el,k){if(!$('termsAccepted')||!$('termsAccepted').checked){$('er').className='err';$('er').textContent='برای ادامه ثبت سفارش، ابتدا شرایط استفاده را مطالعه و گزینه پذیرش را فعال کنید.';return false}if(!val('nm').trim()||!val('ph').trim()||!val('ad').trim()){$('er').textContent='لطفاً نام، شماره تماس و نشانی را کامل کنید.';return false}var L=lines();if(!L.n)return false;if(!saved){saved=true;code=genCode();var od={customer_name:val('nm').trim(),phone:toEn(val('ph').trim()),address:val('ad').trim(),items:L.a,total:L.t,tracking_code:code,status:'shipping'};$('er').className='mu';$('er').textContent='در حال ثبت سفارش…';api('shop_orders',{method:'POST',prefer:'return=minimal',keep:1,body:od}).then(function(){rememberLocalOrder(od);showOrderReceipt();$('er').className='okc';$('er').textContent='سفارش با موفقیت در برق‌یار ثبت شد. کد آن در فهرست پیگیری همین مرورگر ذخیره شد.'}).catch(function(e){saved=false;$('er').className='err';$('er').textContent='ثبت سفارش ناموفق بود: '+(errMsg(e)||'اتصال یا اطلاعات را بررسی کنید.')})}var t=orderText();if(k==='wa')el.href='https://wa.me/'+WA+'?text='+encodeURIComponent(t);else if(k==='tg'){try{navigator.clipboard.writeText(t)}catch(e){}}else{$('f_n').value=val('nm');$('f_p').value=val('ph');$('f_a').value=val('ad');$('f_o').value=t;$('f_next').value=returnAppUrl(code);$('f_return').value=returnAppUrl(code)}return true}
-function openTrack(){show('track');var hc=new URLSearchParams(location.search).get('track')||'',last=null;try{last=JSON.parse(localStorage.getItem('barqyar_last_order')||'null')}catch(e){}if(!hc&&last&&last.code)hc=last.code;var hp=last&&last.phone?last.phone:'';$('in').innerHTML='<h3 style="margin:0 0 8px">پیگیری سفارش</h3><div class="track-guide">🔎 کد سفارش و شماره موبایل آخرین سفارش ثبت‌شده در این مرورگر به‌صورت خودکار درج می‌شود. برای سفارش دیگر، اطلاعات آن را وارد کنید.</div><label>شماره موبایل ثبت‌شده در سفارش</label><input id="trackPhone" type="tel" inputmode="tel" dir="ltr" placeholder="مثلاً 0912…" value="'+esc(hp)+'" oninput="renderLocalOrderChoices()"><label>سفارش‌های ثبت‌شده در این مرورگر</label><select id="trackOrderSelect" onchange="chooseLocalOrder()"><option value="">انتخاب سفارش…</option></select><p class="mu">با انتخاب سفارش، کد یکتای آن به‌صورت خودکار در کادر پیگیری قرار می‌گیرد.</p><label>کد یکتای سفارش</label><input id="tc" placeholder="کد پیگیری سفارش" dir="ltr" autocomplete="off" value="'+esc(hc)+'"><button class="btn" onclick="doTrack()">نمایش وضعیت سفارش</button><div id="tr" style="margin-top:10px"></div>';renderLocalOrderChoices();if(hc){setTimeout(function(){if($('tc'))doTrack()},0)}}
+function openTrack(){
+ show('track');
+ var hp='';try{var last=JSON.parse(localStorage.getItem('barqyar_last_order')||'null');hp=last&&last.phone?last.phone:''}catch(e){}
+ $('in').innerHTML='<h3 style="margin:0 0 8px">پیگیری سفارش‌های من</h3><div class="track-guide">شماره موبایل ثبت‌شده هنگام سفارش را وارد کنید تا فهرست سفارش‌های مرتبط نمایش داده شود.</div><label>شماره موبایل</label><input id="trackPhone" type="tel" inputmode="tel" dir="ltr" placeholder="مثلاً 0912…" value="'+esc(hp)+'"><button class="btn" onclick="loadCustomerOrders()">نمایش سفارش‌های من</button><label>انتخاب سفارش</label><select id="trackOrderSelect" onchange="chooseCustomerOrder()"><option value="">ابتدا شماره موبایل را وارد کنید…</option></select><div id="customerOrderDetail" style="margin-top:10px"></div><div id="tr" style="margin-top:10px"></div>';
+}
+function normalizeCustomerPhone(p){return toEn(String(p||'')).replace(/[^0-9]/g,'')}
+function loadCustomerOrders(){
+ var phone=normalizeCustomerPhone(val('trackPhone'));
+ if(phone.length<10){$('customerOrderDetail').innerHTML='<p class="err">شماره موبایل را کامل وارد کنید.</p>';return}
+ $('customerOrderDetail').innerHTML='<p class="mu">در حال دریافت سفارش‌ها…</p>';
+ api('rpc/shop_orders_by_phone',{method:'POST',body:{p_phone:phone}})
+ .then(function(rows){
+  rows=Array.isArray(rows)?rows:[];var sel=$('trackOrderSelect');
+  sel.innerHTML='<option value="">انتخاب سفارش…</option>'+rows.map(function(o){var title='سفارش '+dt(o.created_at)+' — '+pr(o.total)+' — '+(ST[o.status]||o.status);return '<option value="'+esc(o.tracking_code)+'">'+esc(title)+'</option>'}).join('');
+  if(!rows.length){$('customerOrderDetail').innerHTML='<p class="mu">سفارشی با این شماره یافت نشد.</p>';return}
+  window.customerTrackOrders=rows;
+  $('customerOrderDetail').innerHTML='<p class="mu">'+f(rows.length)+' سفارش یافت شد. برای مشاهده جزئیات، یک سفارش انتخاب کنید.</p>';
+ })
+ .catch(function(e){$('customerOrderDetail').innerHTML='<p class="err">دریافت سفارش‌ها انجام نشد. '+esc(errMsg(e)||'اتصال را بررسی کنید.')+'</p>'});
+}
+function chooseCustomerOrder(){
+ var sel=$('trackOrderSelect'),code=sel&&sel.value,rows=window.customerTrackOrders||[],o=rows.find(function(x){return x.tracking_code===code});
+ if(!o)return;
+ var status=ST[o.status]||o.status||'نامشخص',items=Array.isArray(o.items)?o.items:[];
+ var rowsHtml=items.map(function(x,n){return '<tr><td>'+f(n+1)+'</td><td>'+esc(x.name||'')+'</td><td>'+f(x.qty||0)+'</td><td>'+pr(x.price||0)+'</td><td>'+pr(Number(x.price||0)*Number(x.qty||0))+'</td></tr>'}).join('');
+ var action=o.status==='shipping'?'<div class="rpt-action rpt-amber">در انتظار بررسی و تأیید مدیر برق‌یار.</div>':o.status==='approved'?'<div class="rpt-action rpt-blue">سفارش تأیید شده و در مرحله آماده‌سازی یا تحویل است.</div>':o.status==='done'?'<div class="cfok">سفارش تکمیل شده است.</div>':o.status==='cancelled'?'<div class="rpt-warning">این سفارش لغو شده است.</div>':'';
+ var report='<div id="customerOrderReport" dir="rtl" style="background:#fff;color:#111;padding:14px;font-family:Tahoma,sans-serif;line-height:1.9"><h2 style="text-align:center">⚡ برق‌یار — گزارش سفارش</h2><hr><p>کد یکتا: <b dir="ltr">'+esc(o.tracking_code)+'</b></p><p>تاریخ: '+dt(o.created_at)+'</p><p>وضعیت: '+esc(status)+'</p><p>مبلغ کل: <b>'+pr(o.total)+'</b></p><table style="width:100%;border-collapse:collapse"><tr><th>ردیف</th><th>کالا</th><th>تعداد</th><th>قیمت واحد</th><th>مبلغ</th></tr>'+rowsHtml+'<tr><td colspan="4"><b>جمع کل</b></td><td><b>'+pr(o.total)+'</b></td></tr></table></div>';
+ $('customerOrderDetail').innerHTML='<div class="ar"><b>کد یکتای سفارش: <span dir="ltr">'+esc(o.tracking_code)+'</span></b><div class="mu">تاریخ ثبت: '+dt(o.created_at)+'</div><div class="mu">وضعیت: '+esc(status)+'</div><div class="mu">مبلغ: '+pr(o.total)+'</div>'+action+'<div style="margin-top:12px"><button class="btn gh" onclick="saveCustomerOrderPdf()">ذخیره PDF / چاپ</button></div>'+report+'</div>';
+}
+function saveCustomerOrderPdf(){
+ var source=$('customerOrderReport');if(!source)return;
+ if(window.html2pdf){html2pdf().set({margin:8,filename:'barqyar-order-'+String($('trackOrderSelect').value||'order')+'.pdf',html2canvas:{scale:1.5,backgroundColor:'#fff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(source).save().catch(function(){printDoc(source.outerHTML)});return}
+ printDoc(source.outerHTML);
+}
+function doTrack(){loadCustomerOrders()}
 function doTrack(){
  var c=val('tc').trim().toUpperCase();
  if(!c){$('tr').innerHTML='<p class="err">کد سفارش را وارد کنید.</p>';return}
