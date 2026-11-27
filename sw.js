@@ -1,4 +1,4 @@
-var CACHE='barqyar-v67-phone-tracking-fix-20261128';
+var CACHE='barqyar-v68-phone-tracking-fix2-20261128';
 var SHELL=['./','index.html','manifest.json','app.js','privacy.html','icon-192.png','icon-512.png'];
 self.addEventListener('install',function(e){
  e.waitUntil(caches.open(CACHE).then(function(c){return c.addAll(SHELL)}).then(function(){return self.skipWaiting()}));
