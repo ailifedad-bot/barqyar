@@ -286,20 +286,22 @@ function go(el,k){if(!$('termsAccepted')||!$('termsAccepted').checked){$('er').c
 function openTrack(){
  show('track');
  var hp='';try{var last=JSON.parse(localStorage.getItem('barqyar_last_order')||'null');hp=last&&last.phone?last.phone:''}catch(e){}
- $('in').innerHTML='<h3 style="margin:0 0 8px">پیگیری سفارش‌های من</h3><div class="track-guide">شماره موبایل ثبت‌شده هنگام سفارش را وارد کنید تا فهرست سفارش‌های مرتبط نمایش داده شود.</div><label>شماره موبایل</label><input id="trackPhone" type="tel" inputmode="tel" dir="ltr" placeholder="مثلاً 0912…" value="'+esc(hp)+'"><button class="btn" onclick="loadCustomerOrders()">نمایش سفارش‌های من</button><label>انتخاب سفارش</label><select id="trackOrderSelect" onchange="chooseCustomerOrder()"><option value="">ابتدا شماره موبایل را وارد کنید…</option></select><div id="customerOrderDetail" style="margin-top:10px"></div><div id="tr" style="margin-top:10px"></div>';
+ $('in').innerHTML='<h3 style="margin:0 0 8px">پیگیری سفارش‌های من</h3><div class="track-guide">شماره موبایل ثبت‌شده هنگام سفارش را وارد کنید تا فهرست سفارش‌های مرتبط نمایش داده شود.</div><label>شماره موبایل</label><input id="trackPhone" type="tel" inputmode="tel" dir="ltr" placeholder="مثلاً 0912…" value="'+esc(hp)+'" oninput="customerPhoneChanged()"><button class="btn" onclick="loadCustomerOrders()">نمایش سفارش‌های من</button><label>انتخاب سفارش</label><select id="trackOrderSelect" onchange="chooseCustomerOrder()"><option value="">ابتدا شماره موبایل را وارد کنید…</option></select><div id="customerOrderDetail" style="margin-top:10px"></div><div id="tr" style="margin-top:10px"></div>';
 }
+var customerTrackTimer=null,customerTrackRequest=0;
+function customerPhoneChanged(){clearTimeout(customerTrackTimer);var s=$('trackOrderSelect'),d=$('customerOrderDetail');if(s)s.innerHTML='<option value="">در حال بررسی شماره…</option>';if(d)d.innerHTML='';window.customerTrackOrders=[];var p=normalizeCustomerPhone(val('trackPhone'));if(p.length>=10)customerTrackTimer=setTimeout(loadCustomerOrders,450)}
 function normalizeCustomerPhone(p){return toEn(String(p||'')).replace(/[^0-9]/g,'')}
 function loadCustomerOrders(){
- var phone=normalizeCustomerPhone(val('trackPhone'));
+ var phone=normalizeCustomerPhone(val('trackPhone')),requestId=++customerTrackRequest;
  if(phone.length<10){$('customerOrderDetail').innerHTML='<p class="err">شماره موبایل را کامل وارد کنید.</p>';return}
  $('customerOrderDetail').innerHTML='<p class="mu">در حال دریافت سفارش‌ها…</p>';
  api('rpc/shop_orders_by_phone',{method:'POST',body:{p_phone:phone}})
  .then(function(rows){
-  rows=Array.isArray(rows)?rows:[];var sel=$('trackOrderSelect');
-  sel.innerHTML='<option value="">انتخاب سفارش…</option>'+rows.map(function(o){var title='سفارش '+dt(o.created_at)+' — '+pr(o.total)+' — '+(ST[o.status]||o.status);return '<option value="'+esc(o.tracking_code)+'">'+esc(title)+'</option>'}).join('');
+  if(requestId!==customerTrackRequest||phone!==normalizeCustomerPhone(val('trackPhone')))return;
+  rows=Array.isArray(rows)?rows:[];window.customerTrackOrders=rows;var sel=$('trackOrderSelect');
+  sel.innerHTML='<option value="">انتخاب سفارش…</option>'+rows.map(function(o){var title=(o.customer_name||'مشتری')+' — '+dt(o.created_at)+' — '+pr(o.total)+' — '+(ST[o.status]||o.status);return '<option value="'+esc(o.tracking_code)+'">'+esc(title)+'</option>'}).join('');
   if(!rows.length){$('customerOrderDetail').innerHTML='<p class="mu">سفارشی با این شماره یافت نشد.</p>';return}
-  window.customerTrackOrders=rows;
-  $('customerOrderDetail').innerHTML='<p class="mu">'+f(rows.length)+' سفارش یافت شد. برای مشاهده جزئیات، یک سفارش انتخاب کنید.</p>';
+  $('customerOrderDetail').innerHTML='<p class="mu">'+f(rows.length)+' سفارش یافت شد. <b>نام سفارش‌دهنده: '+esc(rows[0].customer_name||'—')+'</b>. برای مشاهده جزئیات، یک سفارش انتخاب کنید.</p>';
  })
  .catch(function(e){$('customerOrderDetail').innerHTML='<p class="err">دریافت سفارش‌ها انجام نشد. '+esc(errMsg(e)||'اتصال را بررسی کنید.')+'</p>'});
 }
@@ -309,8 +311,8 @@ function chooseCustomerOrder(){
  var status=ST[o.status]||o.status||'نامشخص',items=Array.isArray(o.items)?o.items:[];
  var rowsHtml=items.map(function(x,n){return '<tr><td>'+f(n+1)+'</td><td>'+esc(x.name||'')+'</td><td>'+f(x.qty||0)+'</td><td>'+pr(x.price||0)+'</td><td>'+pr(Number(x.price||0)*Number(x.qty||0))+'</td></tr>'}).join('');
  var action=o.status==='shipping'?'<div class="rpt-action rpt-amber">در انتظار بررسی و تأیید مدیر برق‌یار.</div>':o.status==='approved'?'<div class="rpt-action rpt-blue">سفارش تأیید شده و در مرحله آماده‌سازی یا تحویل است.</div>':o.status==='done'?'<div class="cfok">سفارش تکمیل شده است.</div>':o.status==='cancelled'?'<div class="rpt-warning">این سفارش لغو شده است.</div>':'';
- var report='<div id="customerOrderReport" dir="rtl" style="background:#fff;color:#111;padding:14px;font-family:Tahoma,sans-serif;line-height:1.9"><h2 style="text-align:center">⚡ برق‌یار — گزارش سفارش</h2><hr><p>کد یکتا: <b dir="ltr">'+esc(o.tracking_code)+'</b></p><p>تاریخ: '+dt(o.created_at)+'</p><p>وضعیت: '+esc(status)+'</p><p>مبلغ کل: <b>'+pr(o.total)+'</b></p><table style="width:100%;border-collapse:collapse"><tr><th>ردیف</th><th>کالا</th><th>تعداد</th><th>قیمت واحد</th><th>مبلغ</th></tr>'+rowsHtml+'<tr><td colspan="4"><b>جمع کل</b></td><td><b>'+pr(o.total)+'</b></td></tr></table></div>';
- $('customerOrderDetail').innerHTML='<div class="ar"><b>کد یکتای سفارش: <span dir="ltr">'+esc(o.tracking_code)+'</span></b><div class="mu">تاریخ ثبت: '+dt(o.created_at)+'</div><div class="mu">وضعیت: '+esc(status)+'</div><div class="mu">مبلغ: '+pr(o.total)+'</div>'+action+'<div style="margin-top:12px"><button class="btn gh" onclick="saveCustomerOrderPdf()">ذخیره PDF / چاپ</button></div>'+report+'</div>';
+ var report='<div id="customerOrderReport" dir="rtl" style="background:#fff;color:#111;padding:14px;font-family:Tahoma,sans-serif;line-height:1.9"><h2 style="text-align:center">⚡ برق‌یار — گزارش سفارش</h2><hr><p>نام سفارش‌دهنده: <b>'+esc(o.customer_name||'—')+'</b></p><p>کد یکتا: <b dir="ltr">'+esc(o.tracking_code)+'</b></p><p>تاریخ: '+dt(o.created_at)+'</p><p>وضعیت: '+esc(status)+'</p><p>مبلغ کل: <b>'+pr(o.total)+'</b></p><table style="width:100%;border-collapse:collapse"><tr><th>ردیف</th><th>کالا</th><th>تعداد</th><th>قیمت واحد</th><th>مبلغ</th></tr>'+rowsHtml+'<tr><td colspan="4"><b>جمع کل</b></td><td><b>'+pr(o.total)+'</b></td></tr></table></div>';
+ $('customerOrderDetail').innerHTML='<div class="ar"><b>نام سفارش‌دهنده: '+esc(o.customer_name||'—')+'</b><br><b>کد یکتای سفارش: <span dir="ltr">'+esc(o.tracking_code)+'</span></b><div class="mu">تاریخ ثبت: '+dt(o.created_at)+'</div><div class="mu">وضعیت: '+esc(status)+'</div><div class="mu">مبلغ: '+pr(o.total)+'</div>'+action+'<div style="margin-top:12px"><button class="btn gh" onclick="saveCustomerOrderPdf()">ذخیره PDF / چاپ</button></div>'+report+'</div>';
 }
 function saveCustomerOrderPdf(){
  var source=$('customerOrderReport');if(!source)return;
